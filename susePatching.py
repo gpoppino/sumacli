@@ -91,6 +91,8 @@ def obtain_system_list_from_file(filename):
     systems = {}
     with open(filename) as f:
         for line in f:
+            if len(line.rstrip()) == 0:
+                continue
             s, d = line.split(',')
             if d.rstrip() not in systems.keys():
                 systems[d.rstrip()] = []
