@@ -112,6 +112,9 @@ if __name__ == "__main__":
     client = SumaClient()
     client.login()
     for date in systems.keys():
+        if datetime.strptime(date, "%Y-%m-%d %H:%M:%S") < datetime.now():
+            print("Date " + date + " is in the past! System(s) skipped: " + str(systems[date]))
+            continue
         for system in systems[date]:
             patchingScheduler = SystemPatchingScheduler(client, system, date, 'Security Advisory', True, "security-patching")
             if patchingScheduler.schedule():
