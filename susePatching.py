@@ -91,12 +91,14 @@ def obtain_system_list_from_file(filename):
     systems = {}
     with open(filename) as f:
         for line in f:
-            if len(line.rstrip()) == 0:
+            if len(line.strip()) == 0:
                 continue
             s, d = line.split(',')
-            if d.rstrip() not in systems.keys():
-                systems[d.rstrip()] = []
-            systems[d.rstrip()].append(s)
+            s = s.strip()
+            d = d.strip()
+            if d not in systems.keys():
+                systems[d] = []
+            systems[d].append(s)
     return systems
 
 if __name__ == "__main__":
