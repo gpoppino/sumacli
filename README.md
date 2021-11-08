@@ -1,6 +1,5 @@
 # Summary
-This script schedules the patching of SUMA clients with action chains for each system that include, first patching with 'Security Advisory' type patches 
-and then a reboot of the system.
+This script schedules the patching of SUMA systems with an action chains. An action chain for a system includes the patching with 'Security Advisory' type patches and then a reboot at a specified time and date.
 
 If the patching fails for a system, the reboot is not run by the action chain.
 
