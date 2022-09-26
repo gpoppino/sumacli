@@ -3,6 +3,7 @@
 from xmlrpc.client import ServerProxy
 from datetime import datetime
 from enum import Enum
+import configparser
 import argparse
 import ssl
 import sys
@@ -16,9 +17,13 @@ class AdvisoryType(Enum):
 class SumaClient:
 
     def __init__(self):
-        self.__MANAGER_URL = "https://localhost:8443/rpc/api"
-        self.__MANAGER_LOGIN = "your-username"
-        self.__MANAGER_PASSWORD = "your-password"
+
+        config = configparser.ConfigParser()
+        config.read("config.ini")
+
+        self.__MANAGER_URL = config['server']['api_url']
+        self.__MANAGER_LOGIN = config['credentials']['username']
+        self.__MANAGER_PASSWORD = config['credentials']['password']
         self.__key = None
 
     def login(self):
