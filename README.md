@@ -33,11 +33,21 @@ and no action chain will be created for it.
 
 ## Configuration
 
-The script has the following variables that need to be set:
+The script needs a separate configuration file named `config.ini` with the following format:
 
-* MANAGER_URL => URL for the SUMA (SUSE Manager) server
-* MANAGER_LOGIN => User to log in to SUMA
-* MANAGER_PASSWORD => Password for the user of SUMA
+```ini
+[server]
+api_url = https://your-suma-server-name/rpc/api
+
+[credentials]
+username = your-username
+password = your-password
+```
+
+Options:
+* `api_url`: contains the SUMA server FQDN and path to the API (which is `/rpc/api`) using the HTTPS protocol.
+* `username`: contains the username with permissions to perform patching on the chosen client servers.
+* `password`: contains the password of the username.
 
 ## How to run the script
 
