@@ -3,6 +3,7 @@
 from xmlrpc.client import ServerProxy
 from datetime import datetime
 from enum import Enum
+import argparse
 import ssl
 import sys
 
@@ -10,7 +11,7 @@ class AdvisoryType(Enum):
     SECURITY = 'Security Advisory'
     BUGFIX = 'Bug Fix Advisory'
     PRODUCT_ENHANCEMENT = 'Produt Enhancement Advisory'
-    ALL = 'All Patches' # This is not a SUMA advisory type, but a flag to mark that we will patch the system with all patches available for it
+    ALL = 'All Relevant Errata' # This is not a SUMA advisory type, but a flag to mark that we will patch the system with all patches available for it
 
 class SumaClient:
 
@@ -45,18 +46,18 @@ class SumaClient:
 
 class SystemPatchingScheduler:
 
-    def __init__(self, client, system, date, patchType, rebootRequired, labelPrefix):
+    def __init__(self, client, system, date, advisoryType, rebootRequired, labelPrefix):
         self.__client = client
         self.__system = system
         self.__date = date
-        self.__patchType = patchType
+        self.__advisoryType = advisoryType
         self.__rebootRequired = rebootRequired
         self.__labelPrefix = labelPrefix
 
     def schedule(self):
-        errata = self.__obtainSystemErrata(self.__system, self.__patchType)
+        errata = self.__obtainSystemErrata(self.__system, self.__advisoryType)
         if errata == []:
-            print("No patches of type " + self.__patchType + " available for system: " + self.__system + " . Skipping...")
+            print("No patches of type " + self.__advisoryType + " available for system: " + self.__system + " . Skipping...")
             return False
         label = self.__labelPrefix + "-" + self.__system + str(self.__date)
         try:
@@ -68,14 +69,17 @@ class SystemPatchingScheduler:
             return True
         return False
 
-    def getPatchType(self):
-        return self.__patchType
+    def getAdvisoryType(self):
+        return self.__advisoryType
 
     def __getSystemId(self, system):
         return self.__client.getInstance().system.getId(self.__client.getSessionKey(), system)[0]['id'] # TODO: tener en cuenta varios sistemas con el mismo nombre
 
-    def __obtainSystemErrata(self, system, patchType):
-        return self.__client.getInstance().system.getRelevantErrataByType(self.__client.getSessionKey(), self.__getSystemId(system), patchType)
+    def __obtainSystemErrata(self, system, advisoryType):
+        if advisoryType == AdvisoryType.ALL:
+            return self.__client.getInstance().system.getRelevantErrata(self.__client.getSessionKey(), self.__getSystemId(system))
+        else:
+            return self.__client.getInstance().system.getRelevantErrataByType(self.__client.getSessionKey(), self.__getSystemId(system), advisoryType.value)
 
     def __createActionChain(self, label, system, errata, requiredReboot):
         actionId = self.__client.getInstance().actionchain.createChain(self.__client.getSessionKey(), label)
@@ -109,13 +113,14 @@ def obtain_system_list_from_file(filename):
     return systems
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: " + sys.argv[0] + " filename.csv")
-        sys.exit(1)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filename", help="Name of the file in which systems and their schedules for patching are listed.")
+    parser.add_argument("-a", "--allpatches", help="Apply all available patches to each system.", action="store_true")
+    args = parser.parse_args()
 
-    systems = obtain_system_list_from_file(sys.argv[1])
+    systems = obtain_system_list_from_file(args.filename)
     if systems == {}:
-        print("No systems found in file: " + sys.argv[1])
+        print("No systems found in file: " + args.filename)
         print("The format of the file is: systemName,year-month-day hour:minute:second")
         print("Example: suma-client,2021-11-06 10:00:00")
         sys.exit(0)
@@ -127,9 +132,9 @@ if __name__ == "__main__":
             print("Date " + date + " is in the past! System(s) skipped: " + str(systems[date]))
             continue
         for system in systems[date]:
-            patchingScheduler = SystemPatchingScheduler(client, system, date, AdvisoryType.SECURITY.value, True, "security-patching")
+            patchingScheduler = SystemPatchingScheduler(client, system, date, AdvisoryType.ALL if args.allpatches else AdvisoryType.SECURITY, True, "patching")
             if patchingScheduler.schedule():
-                print("SUCCESS => " + system + " scheduled successfully for " + patchingScheduler.getPatchType() + " patching at " + date)
+                print("SUCCESS => " + system + " scheduled successfully for " + patchingScheduler.getAdvisoryType().value + " patching at " + date)
             else:
-                print("FAILED => " + system + " failed to be scheduled for " + patchingScheduler.getPatchType() + " patching at " + date)
+                print("FAILED => " + system + " failed to be scheduled for " + patchingScheduler.getAdvisoryType().value + " patching at " + date)
     client.logout()
