@@ -2,8 +2,15 @@
 
 from xmlrpc.client import ServerProxy
 from datetime import datetime
+from enum import Enum
 import ssl
 import sys
+
+class AdvisoryType(Enum):
+    SECURITY = 'Security Advisory'
+    BUGFIX = 'Bug Fix Advisory'
+    PRODUCT_ENHANCEMENT = 'Produt Enhancement Advisory'
+    ALL = 'All Patches' # This is not a SUMA advisory type, but a flag to mark that we will patch the system with all patches available for it
 
 class SumaClient:
 
@@ -120,7 +127,7 @@ if __name__ == "__main__":
             print("Date " + date + " is in the past! System(s) skipped: " + str(systems[date]))
             continue
         for system in systems[date]:
-            patchingScheduler = SystemPatchingScheduler(client, system, date, 'Security Advisory', True, "security-patching")
+            patchingScheduler = SystemPatchingScheduler(client, system, date, AdvisoryType.SECURITY.value, True, "security-patching")
             if patchingScheduler.schedule():
                 print("SUCCESS => " + system + " scheduled successfully for " + patchingScheduler.getPatchType() + " patching at " + date)
             else:
