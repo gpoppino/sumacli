@@ -16,10 +16,10 @@ class AdvisoryType(Enum):
 
 class SumaClient:
 
-    def __init__(self):
+    def __init__(self, config_filename="config.ini"):
 
         config = configparser.ConfigParser()
-        config.read("config.ini")
+        config.read(config_filename)
 
         self.__MANAGER_URL = config['server']['api_url']
         self.__MANAGER_LOGIN = config['credentials']['username']
@@ -39,6 +39,8 @@ class SumaClient:
         if self.__key == None:
             return
         self.__client.auth.logout(self.__key)
+        self.__client("close")()
+        self.__key = None
 
     def isLoggedIn(self):
         return self.__key != None
