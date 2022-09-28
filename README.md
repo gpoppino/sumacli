@@ -46,8 +46,8 @@ password = your-password
 
 Options:
 * `api_url`: contains the SUMA server FQDN and path to the API (which is `/rpc/api`) using the HTTPS protocol.
-* `username`: contains the username with permissions to perform patching on the chosen client servers.
-* `password`: contains the password of the username.
+* `username`: contains a SUMA username with permissions to perform patching on the chosen client servers.
+* `password`: contains the password of the SUMA username.
 
 ## How to run the script
 
