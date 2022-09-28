@@ -39,6 +39,8 @@ class SumaClient:
         if self.__key == None:
             return
         self.__client.auth.logout(self.__key)
+        self.__client("close")()
+        self.__key = None
 
     def isLoggedIn(self):
         return self.__key != None
