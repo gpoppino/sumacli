@@ -29,7 +29,7 @@ class SumaClient:
         self.__key = None
 
     def login(self):
-        if self.__key != None:
+        if self.__key is not None:
             return
         context = ssl.create_default_context()
         context.check_hostname = False
@@ -39,14 +39,14 @@ class SumaClient:
             self.__MANAGER_LOGIN, self.__MANAGER_PASSWORD)
 
     def logout(self):
-        if self.__key == None:
+        if self.__key is None:
             return
         self.__client.auth.logout(self.__key)
         self.__client("close")()
         self.__key = None
 
     def isLoggedIn(self):
-        return self.__key != None
+        return self.__key is not None
 
     def getSessionKey(self):
         return self.__key
@@ -71,6 +71,7 @@ class SystemPatchingScheduler:
             print("No patches of type " + self.__advisoryType +
                   " available for system: " + self.__system + " . Skipping...")
             return False
+
         label = self.__labelPrefix + "-" + self.__system + str(self.__date)
         try:
             self.__createActionChain(
@@ -78,6 +79,7 @@ class SystemPatchingScheduler:
         except:
             print("Failed to create action chain for system: " + self.__system)
             return False
+
         if self.__client.getInstance().actionchain.scheduleChain(self.__client.getSessionKey(), label, datetime.strptime(self.__date, "%Y-%m-%d %H:%M:%S")) == 1:
             return True
         return False
