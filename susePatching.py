@@ -105,19 +105,30 @@ class SystemPatchingScheduler:
     def __addSystemRebootToActionChain(self, system, label):
         return self.__client.getInstance().actionchain.addSystemReboot(self.__client.getSessionKey(), self.__getSystemId(system), label)
 
-def obtain_system_list_from_file(filename):
-    systems = {}
-    with open(filename) as f:
-        for line in f:
-            if len(line.strip()) == 0:
-                continue
-            s, d = line.split(',')
-            s = s.strip()
-            d = d.strip()
-            if d not in systems.keys():
-                systems[d] = []
-            systems[d].append(s)
-    return systems
+class SystemListParser:
+
+    def __init__(self, sFilename):
+        self.__filename = sFilename
+        self.__systems = {}
+
+    def parse(self):
+        with open(self.__filename) as f:
+            for line in f:
+                self._addSystem(line)
+        return self.__systems
+
+    def getSystems(self):
+        return self.__systems
+
+    def _addSystem(self, line):
+        if len(line.strip()) == 0:
+            return
+        s, d = line.split(',')
+        s = s.strip()
+        d = d.strip()
+        if d not in self.__systems.keys():
+            self.__systems[d] = []
+        self.__systems[d].append(s)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -125,7 +136,7 @@ if __name__ == "__main__":
     parser.add_argument("-a", "--allpatches", help="Apply all available patches to each system.", action="store_true")
     args = parser.parse_args()
 
-    systems = obtain_system_list_from_file(args.filename)
+    systems = SystemListParser(args.filename).parse()
     if systems == {}:
         print("No systems found in file: " + args.filename)
         print("The format of the file is: systemName,year-month-day hour:minute:second")
