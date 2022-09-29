@@ -8,16 +8,18 @@ import argparse
 import ssl
 import sys
 
+
 class AdvisoryType(Enum):
     SECURITY = 'Security Advisory'
     BUGFIX = 'Bug Fix Advisory'
     PRODUCT_ENHANCEMENT = 'Produt Enhancement Advisory'
-    ALL = 'All Relevant Errata' # This is not a SUMA advisory type, but a flag to mark that we will patch the system with all patches available for it
+    # This is not a SUMA advisory type, but a flag to mark that we will patch the system with all patches available for it
+    ALL = 'All Relevant Errata'
+
 
 class SumaClient:
 
     def __init__(self, config_filename="config.ini"):
-
         config = configparser.ConfigParser()
         config.read(config_filename)
 
@@ -33,7 +35,8 @@ class SumaClient:
         context.check_hostname = False
         context.verify_mode = ssl.CERT_NONE
         self.__client = ServerProxy(self.__MANAGER_URL, context=context)
-        self.__key = self.__client.auth.login(self.__MANAGER_LOGIN, self.__MANAGER_PASSWORD)
+        self.__key = self.__client.auth.login(
+            self.__MANAGER_LOGIN, self.__MANAGER_PASSWORD)
 
     def logout(self):
         if self.__key == None:
@@ -51,6 +54,7 @@ class SumaClient:
     def getInstance(self):
         return self.__client
 
+
 class SystemPatchingScheduler:
 
     def __init__(self, client, system, date, advisoryType, rebootRequired, labelPrefix):
@@ -64,11 +68,13 @@ class SystemPatchingScheduler:
     def schedule(self):
         errata = self.__obtainSystemErrata(self.__system, self.__advisoryType)
         if errata == []:
-            print("No patches of type " + self.__advisoryType + " available for system: " + self.__system + " . Skipping...")
+            print("No patches of type " + self.__advisoryType +
+                  " available for system: " + self.__system + " . Skipping...")
             return False
         label = self.__labelPrefix + "-" + self.__system + str(self.__date)
         try:
-            self.__createActionChain(label, self.__system, errata, self.__rebootRequired)
+            self.__createActionChain(
+                label, self.__system, errata, self.__rebootRequired)
         except:
             print("Failed to create action chain for system: " + self.__system)
             return False
@@ -80,7 +86,8 @@ class SystemPatchingScheduler:
         return self.__advisoryType
 
     def __getSystemId(self, system):
-        return self.__client.getInstance().system.getId(self.__client.getSessionKey(), system)[0]['id'] # TODO: tener en cuenta varios sistemas con el mismo nombre
+        # TODO: tener en cuenta varios sistemas con el mismo nombre
+        return self.__client.getInstance().system.getId(self.__client.getSessionKey(), system)[0]['id']
 
     def __obtainSystemErrata(self, system, advisoryType):
         if advisoryType == AdvisoryType.ALL:
@@ -89,7 +96,8 @@ class SystemPatchingScheduler:
             return self.__client.getInstance().system.getRelevantErrataByType(self.__client.getSessionKey(), self.__getSystemId(system), advisoryType.value)
 
     def __createActionChain(self, label, system, errata, requiredReboot):
-        actionId = self.__client.getInstance().actionchain.createChain(self.__client.getSessionKey(), label)
+        actionId = self.__client.getInstance().actionchain.createChain(
+            self.__client.getSessionKey(), label)
         if actionId > 0:
             self.__addErrataToActionChain(system, errata, label)
             if requiredReboot:
@@ -104,6 +112,7 @@ class SystemPatchingScheduler:
 
     def __addSystemRebootToActionChain(self, system, label):
         return self.__client.getInstance().actionchain.addSystemReboot(self.__client.getSessionKey(), self.__getSystemId(system), label)
+
 
 class SystemListParser:
 
@@ -130,10 +139,13 @@ class SystemListParser:
             self.__systems[d] = []
         self.__systems[d].append(s)
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("filename", help="Name of the file in which systems and their schedules for patching are listed.")
-    parser.add_argument("-a", "--allpatches", help="Apply all available patches to each system.", action="store_true")
+    parser.add_argument(
+        "filename", help="Name of the file in which systems and their schedules for patching are listed.")
+    parser.add_argument(
+        "-a", "--allpatches", help="Apply all available patches to each system.", action="store_true")
     args = parser.parse_args()
 
     systems = SystemListParser(args.filename).parse()
@@ -147,12 +159,16 @@ if __name__ == "__main__":
     client.login()
     for date in systems.keys():
         if datetime.strptime(date, "%Y-%m-%d %H:%M:%S") < datetime.now():
-            print("Date " + date + " is in the past! System(s) skipped: " + str(systems[date]))
+            print("Date " + date +
+                  " is in the past! System(s) skipped: " + str(systems[date]))
             continue
         for system in systems[date]:
-            patchingScheduler = SystemPatchingScheduler(client, system, date, AdvisoryType.ALL if args.allpatches else AdvisoryType.SECURITY, True, "patching")
+            patchingScheduler = SystemPatchingScheduler(
+                client, system, date, AdvisoryType.ALL if args.allpatches else AdvisoryType.SECURITY, True, "patching")
             if patchingScheduler.schedule():
-                print("SUCCESS => " + system + " scheduled successfully for " + patchingScheduler.getAdvisoryType().value + " patching at " + date)
+                print("SUCCESS => " + system + " scheduled successfully for " +
+                      patchingScheduler.getAdvisoryType().value + " patching at " + date)
             else:
-                print("FAILED => " + system + " failed to be scheduled for " + patchingScheduler.getAdvisoryType().value + " patching at " + date)
+                print("FAILED => " + system + " failed to be scheduled for " +
+                      patchingScheduler.getAdvisoryType().value + " patching at " + date)
     client.logout()
