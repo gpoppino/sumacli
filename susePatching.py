@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 from xmlrpc.client import ServerProxy
+from xmlrpc.client import Fault
 from datetime import datetime
 from enum import Enum
 import configparser
@@ -76,8 +77,10 @@ class SystemPatchingScheduler:
         try:
             self.__createActionChain(
                 label, self.__system, errata, self.__rebootRequired)
-        except:
+        except Fault as err:
             print("Failed to create action chain for system: " + self.__system)
+            print("Fault code: %d" % err.faultCode)
+            print("Fault string: %s" % err.faultString)
             return False
 
         if self.__client.getInstance().actionchain.scheduleChain(self.__client.getSessionKey(), label, datetime.strptime(self.__date, "%Y-%m-%d %H:%M:%S")) == 1:
