@@ -27,3 +27,7 @@ class TestSystemListParser(unittest.TestCase):
         self.parser._addSystem("instance-k3s-3.suse.local,2022-10-07 17:45:00")
         self.assertDictEqual({"2022-10-07 17:45:00": ["instance-k3s-1.suse.local", "instance-k3s-3.suse.local"],
                              "2022-10-08 17:50:00": ["instance-k3s-2.suse.local"]}, self.parser.getSystems())
+
+    def test_systemListParserInconsistentInput(self):
+        self.assertFalse(self.parser._addSystem("instance-k3s-1.suse.local;2023-12-05 13:00:00"))
+        self.assertDictEqual({}, self.parser.getSystems())

@@ -128,7 +128,8 @@ class SystemListParser:
     def parse(self):
         with open(self.__filename) as f:
             for line in f:
-                self._addSystem(line)
+                if not self._addSystem(line):
+                    print("Line skipped: " + line)
         return self.__systems
 
     def getSystems(self):
@@ -136,13 +137,17 @@ class SystemListParser:
 
     def _addSystem(self, line):
         if len(line.strip()) == 0:
-            return
-        s, d = line.split(',')
+            return False
+        try:
+            s, d = line.split(',')
+        except ValueError:
+            return False
         s = s.strip()
         d = d.strip()
         if d not in self.__systems.keys():
             self.__systems[d] = []
         self.__systems[d].append(s)
+        return True
 
 
 if __name__ == "__main__":
