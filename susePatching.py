@@ -156,6 +156,8 @@ if __name__ == "__main__":
         "filename", help="Name of the file in which systems and their schedules for patching are listed.")
     parser.add_argument(
         "-a", "--allpatches", help="Apply all available patches to each system.", action="store_true")
+    parser.add_argument(
+        "-r", "--reboot", help="Add a system reboot to each action chain for each system.", action="store_true")
     args = parser.parse_args()
 
     systems = SystemListParser(args.filename).parse()
@@ -174,7 +176,7 @@ if __name__ == "__main__":
             continue
         for system in systems[date]:
             patchingScheduler = SystemPatchingScheduler(
-                client, system, date, AdvisoryType.ALL if args.allpatches else AdvisoryType.SECURITY, True, "patching")
+                client, system, date, AdvisoryType.ALL if args.allpatches else AdvisoryType.SECURITY, args.reboot, "patching")
             if patchingScheduler.schedule():
                 print("SUCCESS => " + system + " scheduled successfully for " +
                       patchingScheduler.getAdvisoryType().value + " patching at " + date)
