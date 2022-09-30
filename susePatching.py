@@ -70,8 +70,8 @@ class SystemPatchingScheduler:
     def schedule(self):
         errata = self.__systemErrataInspector.obtainSystemErrata()
         if errata == []:
-            print("No patches of type " + self.__advisoryType +
-                  " available for system: " + self.__system + " . Skipping...")
+            print("No patches of type '" + self.__advisoryType.value +
+                  "' available for system: " + self.__system + " . Skipping...")
             return False
 
         label = self.__labelPrefix + "-" + self.__system + str(self.__date)
