@@ -65,9 +65,10 @@ class SystemPatchingScheduler:
         self.__advisoryType = advisoryType
         self.__rebootRequired = rebootRequired
         self.__labelPrefix = labelPrefix
+        self.__systemErrataInspector = SystemErrataInspector(client, system, advisoryType)
 
     def schedule(self):
-        errata = self.__obtainSystemErrata(self.__system, self.__advisoryType)
+        errata = self.__systemErrataInspector.obtainSystemErrata()
         if errata == []:
             print("No patches of type " + self.__advisoryType +
                   " available for system: " + self.__system + " . Skipping...")
@@ -90,22 +91,12 @@ class SystemPatchingScheduler:
     def getAdvisoryType(self):
         return self.__advisoryType
 
-    def __getSystemId(self, system):
-        # TODO: tener en cuenta varios sistemas con el mismo nombre
-        return self.__client.getInstance().system.getId(self.__client.getSessionKey(), system)[0]['id']
-
-    def __obtainSystemErrata(self, system, advisoryType):
-        if advisoryType == AdvisoryType.ALL:
-            return self.__client.getInstance().system.getRelevantErrata(self.__client.getSessionKey(), self.__getSystemId(system))
-        else:
-            return self.__client.getInstance().system.getRelevantErrataByType(self.__client.getSessionKey(), self.__getSystemId(system), advisoryType.value)
-
     def __createActionChain(self, label, system, errata, requiredReboot):
         actionId = self.__client.getInstance().actionchain.createChain(
             self.__client.getSessionKey(), label)
         if actionId > 0:
             self.__addErrataToActionChain(system, errata, label)
-            if requiredReboot:
+            if requiredReboot or self.__systemErrataInspector.hasSuggestedReboot():
                 self.__addSystemRebootToActionChain(system, label)
         return actionId
 
@@ -113,10 +104,39 @@ class SystemPatchingScheduler:
         errataIds = []
         for patch in errata:
             errataIds.append(patch['id'])
-        return self.__client.getInstance().actionchain.addErrataUpdate(self.__client.getSessionKey(), self.__getSystemId(system), errataIds, label)
+        return self.__client.getInstance().actionchain.addErrataUpdate(self.__client.getSessionKey(), self.__systemErrataInspector.getSystemId(), errataIds, label)
 
     def __addSystemRebootToActionChain(self, system, label):
-        return self.__client.getInstance().actionchain.addSystemReboot(self.__client.getSessionKey(), self.__getSystemId(system), label)
+        return self.__client.getInstance().actionchain.addSystemReboot(self.__client.getSessionKey(), self.__systemErrataInspector.getSystemId(), label)
+
+
+class SystemErrataInspector:
+
+    def __init__(self, client, system, advisoryType):
+        self.__client = client
+        self.__system = system
+        self.__advisoryType = advisoryType
+        self.__errata = []
+
+    def hasSuggestedReboot(self):
+        for patch in self.obtainSystemErrata():
+            keywords = self.__client.getInstance().errata.listKeywords(self.__client.getSessionKey(), patch['advisory_name'])
+            if 'reboot_suggested' in keywords:
+                return True
+        return False
+
+    def obtainSystemErrata(self):
+        if self.__errata != []:
+            return self.__errata
+        if self.__advisoryType == AdvisoryType.ALL:
+            self.__errata = self.__client.getInstance().system.getRelevantErrata(self.__client.getSessionKey(), self.getSystemId())
+        else:
+            self.__errata = self.__client.getInstance().system.getRelevantErrataByType(self.__client.getSessionKey(),
+                self.getSystemId(), self.__advisoryType.value)
+        return self.__errata
+
+    def getSystemId(self):
+        return self.__client.getInstance().system.getId(self.__client.getSessionKey(), self.__system)[0]['id']
 
 
 class SystemListParser:
