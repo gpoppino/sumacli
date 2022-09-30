@@ -185,7 +185,7 @@ if __name__ == "__main__":
         print("No systems found in file: " + args.filename)
         print("The format of the file is: systemName,year-month-day hour:minute:second")
         print("Example: suma-client,2021-11-06 10:00:00")
-        sys.exit(0)
+        sys.exit(1)
 
     client = SumaClient()
     client.login()
