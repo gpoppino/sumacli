@@ -169,6 +169,12 @@ class SystemListParser:
         self.__systems[d].append(s)
         return True
 
+# Exit codes:
+# 0  success. every system has been scheduled for patching
+# 2  total failure. improper command line options passed
+# 64 partial failure. partial systems scheduling has failed
+# 65 total failure. all systems scheduling has failed
+# 66 total failure. all systems scheduling has failed due to improper input
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -185,8 +191,11 @@ if __name__ == "__main__":
         print("No systems found in file: " + args.filename)
         print("The format of the file is: systemName,year-month-day hour:minute:second")
         print("Example: suma-client,2021-11-06 10:00:00")
-        sys.exit(1)
+        sys.exit(66)
 
+    exit_code = 0
+    failed_systems = 0
+    success_systems = 0
     client = SumaClient()
     client.login()
     for date in systems.keys():
@@ -200,7 +209,16 @@ if __name__ == "__main__":
             if patchingScheduler.schedule():
                 print("SUCCESS => " + system + " scheduled successfully for " +
                       patchingScheduler.getAdvisoryType().value + " patching at " + date)
+                success_systems += 1
             else:
                 print("FAILED => " + system + " failed to be scheduled for " +
                       patchingScheduler.getAdvisoryType().value + " patching at " + date)
+                failed_systems += 1
     client.logout()
+    if failed_systems > 0 and success_systems > 0:
+        exit_code = 64
+    elif failed_systems > 0 and success_systems == 0:
+        exit_code = 65
+    elif failed_systems == 0 and success_systems > 0:
+        exit_code = 0
+    sys.exit(exit_code)
