@@ -68,6 +68,11 @@ class SystemPatchingScheduler:
         self.__systemErrataInspector = SystemErrataInspector(client, system, advisoryType)
 
     def schedule(self):
+        scheduleDate = datetime.strptime(self.__date, "%Y-%m-%d %H:%M:%S")
+        if self.__systemHasInProgressAction(self.__system, scheduleDate):
+            print("System '" + self.__system + "' already has an action in progress for " + self.__date + ". Skipped...")
+            return False
+
         errata = self.__systemErrataInspector.obtainSystemErrata()
         if errata == []:
             print("No patches of type '" + self.__advisoryType.value +
@@ -84,12 +89,22 @@ class SystemPatchingScheduler:
             print("Fault string: %s" % err.faultString)
             return False
 
-        if self.__client.getInstance().actionchain.scheduleChain(self.__client.getSessionKey(), label, datetime.strptime(self.__date, "%Y-%m-%d %H:%M:%S")) == 1:
+        if self.__client.getInstance().actionchain.scheduleChain(self.__client.getSessionKey(), label, scheduleDate) == 1:
             return True
         return False
 
     def getAdvisoryType(self):
         return self.__advisoryType
+
+    def __systemHasInProgressAction(self, system, scheduleDate):
+        inProgressActions = self.__client.getInstance().schedule.listInProgressActions(self.__client.getSessionKey())
+        for action in inProgressActions:
+            converted = datetime.strptime(action['earliest'].value, "%Y%m%dT%H:%M:%S").isoformat()
+            if scheduleDate.isoformat() == converted:
+                for s in self.__client.getInstance().schedule.listInProgressSystems(self.__client.getSessionKey(), action['id']):
+                    if s['server_name'] == system:
+                        return True
+        return False
 
     def __createActionChain(self, label, system, errata, requiredReboot):
         actionId = self.__client.getInstance().actionchain.createChain(
