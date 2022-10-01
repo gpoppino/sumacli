@@ -6,6 +6,8 @@ from datetime import datetime
 from enum import Enum
 import configparser
 import argparse
+import logging.config
+import logging
 import base64
 import ssl
 import sys
@@ -86,16 +88,17 @@ class SystemPatchingScheduler:
         self.__rebootRequired = rebootRequired
         self.__labelPrefix = labelPrefix
         self.__systemErrataInspector = SystemErrataInspector(client, system, advisoryType)
+        self.__logger = logging.getLogger(__name__)
 
     def schedule(self):
         scheduleDate = datetime.strptime(self.__date, "%Y-%m-%d %H:%M:%S")
         system = self.__systemErrataInspector.getSystemName()
         if self.__systemHasInProgressAction(system, scheduleDate):
-            print("System '" + system + "' already has an action in progress for " + self.__date + ". Skipped...")
+            self.__logger.error("System '" + system + "' already has an action in progress for " + self.__date + ". Skipped...")
             return False
 
         if self.__systemErrataInspector.errata == []:
-            print("No patches of type '" + self.__advisoryType.value +
+            self.__logger.warning("No patches of type '" + self.__advisoryType.value +
                   "' available for system: " + system + " . Skipping...")
             return False
 
@@ -103,9 +106,9 @@ class SystemPatchingScheduler:
         try:
             self.__createActionChain(label, self.__rebootRequired)
         except Fault as err:
-            print("Failed to create action chain for system: " + system)
-            print("Fault code: %d" % err.faultCode)
-            print("Fault string: %s" % err.faultString)
+            self.__logger.error("Failed to create action chain for system: " + system)
+            self.__logger.error("Fault code: %d" % err.faultCode)
+            self.__logger.error("Fault string: %s" % err.faultString)
             return False
 
         if self.__client.actionchain.scheduleChain(label, scheduleDate) == 1:
@@ -247,12 +250,13 @@ class SystemListParser:
     def __init__(self, sFilename):
         self.__filename = sFilename
         self.__systems = {}
+        self.__logger = logging.getLogger(__name__)
 
     def parse(self):
         with open(self.__filename) as f:
             for line in f:
                 if not self._addSystem(line):
-                    print("Line skipped: " + line)
+                    self.__logger.error("Line skipped: " + line)
         return self.__systems
 
     def getSystems(self):
@@ -289,11 +293,14 @@ if __name__ == "__main__":
         "-r", "--reboot", help="Add a system reboot to each action chain for each system.", action="store_true")
     args = parser.parse_args()
 
+    logging.config.fileConfig('logging.conf')
+    logger = logging.getLogger(__name__)
+
     systems = SystemListParser(args.filename).parse()
     if systems == {}:
-        print("No systems found in file: " + args.filename)
-        print("The format of the file is: systemName,year-month-day hour:minute:second")
-        print("Example: suma-client,2021-11-06 10:00:00")
+        logger.error("No systems found in file: " + args.filename)
+        logger.error("The format of the file is: systemName,year-month-day hour:minute:second")
+        logger.error("Example: suma-client,2021-11-06 10:00:00")
         sys.exit(66)
 
     exit_code = 0
@@ -303,19 +310,19 @@ if __name__ == "__main__":
     client.login()
     for date in systems.keys():
         if datetime.strptime(date, "%Y-%m-%d %H:%M:%S") < datetime.now():
-            print("Date " + date +
+            logger.warning("Date " + date +
                   " is in the past! System(s) skipped: " + str(systems[date]))
             continue
         for system in systems[date]:
             patchingScheduler = SystemPatchingScheduler(
                 client, system, date, AdvisoryType.ALL if args.allpatches else AdvisoryType.SECURITY, args.reboot, "patching")
             if patchingScheduler.schedule():
-                print("SUCCESS => " + system + " scheduled successfully for " +
-                      patchingScheduler.getAdvisoryType().value + " patching at " + date)
+                logger.info("System '" + system + "' scheduled successfully for '" +
+                      patchingScheduler.getAdvisoryType().value + "' patching at " + date)
                 success_systems += 1
             else:
-                print("FAILED => " + system + " failed to be scheduled for " +
-                      patchingScheduler.getAdvisoryType().value + " patching at " + date)
+                logger.error("System '" + system + "' failed to be scheduled for '" +
+                      patchingScheduler.getAdvisoryType().value + "' patching at " + date)
                 failed_systems += 1
     client.logout()
     if failed_systems > 0 and success_systems > 0:
