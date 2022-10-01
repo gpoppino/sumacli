@@ -2,3 +2,4 @@ config.ini
 *.csv
 .vscode
 __pycache__
+*.log
