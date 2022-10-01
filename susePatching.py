@@ -6,6 +6,7 @@ from datetime import datetime
 from enum import Enum
 import configparser
 import argparse
+import base64
 import ssl
 import sys
 
@@ -80,7 +81,6 @@ class SystemPatchingScheduler:
 
     def __init__(self, client, system, date, advisoryType, rebootRequired, labelPrefix):
         self.__client = client
-        self.__system = system
         self.__date = date
         self.__advisoryType = advisoryType
         self.__rebootRequired = rebootRequired
@@ -89,22 +89,22 @@ class SystemPatchingScheduler:
 
     def schedule(self):
         scheduleDate = datetime.strptime(self.__date, "%Y-%m-%d %H:%M:%S")
-        if self.__systemHasInProgressAction(self.__system, scheduleDate):
-            print("System '" + self.__system + "' already has an action in progress for " + self.__date + ". Skipped...")
+        system = self.__systemErrataInspector.getSystemName()
+        if self.__systemHasInProgressAction(system, scheduleDate):
+            print("System '" + system + "' already has an action in progress for " + self.__date + ". Skipped...")
             return False
 
         errata = self.__systemErrataInspector.obtainSystemErrata()
         if errata == []:
             print("No patches of type '" + self.__advisoryType.value +
-                  "' available for system: " + self.__system + " . Skipping...")
+                  "' available for system: " + system + " . Skipping...")
             return False
 
-        label = self.__labelPrefix + "-" + self.__system + str(self.__date)
+        label = self.__labelPrefix + "-" + self.__systemErrataInspector.getSystemName() + str(self.__date)
         try:
-            self.__createActionChain(
-                label, self.__system, errata, self.__rebootRequired)
+            self.__createActionChain(label, self.__rebootRequired)
         except Fault as err:
-            print("Failed to create action chain for system: " + self.__system)
+            print("Failed to create action chain for system: " + system)
             print("Fault code: %d" % err.faultCode)
             print("Fault string: %s" % err.faultString)
             return False
@@ -126,19 +126,37 @@ class SystemPatchingScheduler:
                         return True
         return False
 
-    def __createActionChain(self, label, system, errata, requiredReboot):
+    def __createActionChain(self, label, requiredReboot):
         actionId = self.__client.actionchain.createChain(label)
         if actionId > 0:
-            self.__addErrataToActionChain(system, errata, label)
-            if requiredReboot or self.__systemErrataInspector.hasSuggestedReboot():
+            if self.__systemErrataInspector.hasZypperPatches():
+                zypper_errata = self.__systemErrataInspector.obtainZypperPatches()
+                self.__addErrataToActionChain(zypper_errata, label)
+
+            if self.__systemErrataInspector.hasSaltPatches():
+                salt_errata = self.__systemErrataInspector.obtainSaltPatches()
+                self.__addErrataToActionChain(salt_errata, label)
+                if self.__systemErrataInspector.hasSaltRestartSuggested():
+                    self.__addScriptRunToActionChain("systemctl restart salt-minion", label)
+
+            errata = self.__systemErrataInspector.obtainSystemErrataWithoutSoftwareStackPatches()
+            if errata != []:
+                self.__addErrataToActionChain(errata, label)
+
+            if requiredReboot or self.__systemErrataInspector.hasRebootSuggested():
                 self.__addSystemRebootToActionChain(system, label)
         return actionId
 
-    def __addErrataToActionChain(self, system, errata, label):
+    def __addErrataToActionChain(self, errata, label):
         errataIds = []
         for patch in errata:
             errataIds.append(patch['id'])
         return self.__client.actionchain.addErrataUpdate(self.__systemErrataInspector.getSystemId(), errataIds, label)
+
+    def __addScriptRunToActionChain(self, script, label):
+        script = "#!/bin/bash\n" + script
+        return self.__client.actionchain.addScriptRun(self.__systemErrataInspector.getSystemId(), label,
+                                                        "root", "root", 60, base64.b64encode(script.encode()).decode())
 
     def __addSystemRebootToActionChain(self, system, label):
         return self.__client.actionchain.addSystemReboot(self.__systemErrataInspector.getSystemId(), label)
@@ -152,24 +170,75 @@ class SystemErrataInspector:
         self.__advisoryType = advisoryType
         self.__errata = []
 
-    def hasSuggestedReboot(self):
-        for patch in self.obtainSystemErrata():
-            keywords = self.__client.errata.listKeywords(patch['advisory_name'])
-            if 'reboot_suggested' in keywords:
+    def hasRebootSuggested(self):
+        return self.__hasKeyword('reboot_suggested', self.__errata)
+
+    def hasRestartSuggested(self):
+        return self.__hasKeyword('restart_suggested', self.__errata)
+
+    def hasSaltPatches(self):
+        for patch in self.__errata:
+            if self.__hasInPatchSynopsis(['salt'], patch):
                 return True
         return False
 
+    def hasZypperPatches(self):
+        for patch in self.__errata:
+            if self.__hasInPatchSynopsis(['zypp', 'zlib'], patch):
+                return True
+        return False
+
+    def hasSaltRestartSuggested(self):
+        errata = self.obtainSaltPatches()
+        return self.__hasKeyword('restart_suggested', errata)
+
+    def obtainZypperPatches(self):
+        return self.__obtainErrataBySynopsisFilter(['zypp', 'zlib'], self.__errata)
+
+    def obtainSaltPatches(self):
+        return self.__obtainErrataBySynopsisFilter(['salt'], self.__errata)
+
+    def __hasInPatchSynopsis(self, keywords, patch):
+        synopsis = patch['advisory_synopsis'].lower()
+        for k in keywords:
+            if k in synopsis:
+                return True
+        return False
+
+    def __hasKeyword(self, k, errata):
+        for patch in errata:
+            keywords = self.__client.errata.listKeywords(patch['advisory_name'])
+            if k in keywords:
+                return True
+        return False
+
+    def __obtainErrataBySynopsisFilter(self, filter, errata, reverse=False):
+        patches = []
+        for patch in errata:
+            hasPatch = self.__hasInPatchSynopsis(filter, patch)
+            if hasPatch and reverse:
+                continue
+            if hasPatch and not reverse:
+                patches.append(patch)
+            elif not hasPatch and reverse:
+                patches.append(patch)
+        return patches
+
     def obtainSystemErrata(self):
-        if self.__errata != []:
-            return self.__errata
         if self.__advisoryType == AdvisoryType.ALL:
             self.__errata = self.__client.system.getRelevantErrata(self.getSystemId())
         else:
             self.__errata = self.__client.system.getRelevantErrataByType(self.getSystemId(), self.__advisoryType.value)
         return self.__errata
 
+    def obtainSystemErrataWithoutSoftwareStackPatches(self):
+        return self.__obtainErrataBySynopsisFilter(['zypp', 'zlib', 'salt'], self.obtainSystemErrata(), True)
+
     def getSystemId(self):
         return self.__client.system.getId(self.__system)[0]['id']
+
+    def getSystemName(self):
+        return self.__system
 
 
 class SystemListParser:
