@@ -18,6 +18,22 @@ class AdvisoryType(Enum):
     ALL = 'All Relevant Errata'
 
 
+class _MultiCallMethod:
+    def __init__(self, client, name):
+        self.__client = client
+        self.__name = name
+
+    def __getattr__(self, name):
+        return _MultiCallMethod(self.__client, "%s.%s" % (self.__name, name))
+
+    def __call__(self, *args):
+        m = getattr(self.__client.getInstance(), self.__name)
+        if args == ():
+            return m(self.__client.getSessionKey())
+        else:
+            return m(self.__client.getSessionKey(), *args)
+
+
 class SumaClient:
 
     def __init__(self, config_filename="config.ini"):
@@ -28,6 +44,10 @@ class SumaClient:
         self.__MANAGER_LOGIN = config['credentials']['username']
         self.__MANAGER_PASSWORD = config['credentials']['password']
         self.__key = None
+        self.__client = None
+
+    def __getattr__(self, name):
+        return _MultiCallMethod(self, name)
 
     def login(self):
         if self.__key is not None:
@@ -89,7 +109,7 @@ class SystemPatchingScheduler:
             print("Fault string: %s" % err.faultString)
             return False
 
-        if self.__client.getInstance().actionchain.scheduleChain(self.__client.getSessionKey(), label, scheduleDate) == 1:
+        if self.__client.actionchain.scheduleChain(label, scheduleDate) == 1:
             return True
         return False
 
@@ -97,18 +117,17 @@ class SystemPatchingScheduler:
         return self.__advisoryType
 
     def __systemHasInProgressAction(self, system, scheduleDate):
-        inProgressActions = self.__client.getInstance().schedule.listInProgressActions(self.__client.getSessionKey())
+        inProgressActions = self.__client.schedule.listInProgressActions()
         for action in inProgressActions:
             converted = datetime.strptime(action['earliest'].value, "%Y%m%dT%H:%M:%S").isoformat()
             if scheduleDate.isoformat() == converted:
-                for s in self.__client.getInstance().schedule.listInProgressSystems(self.__client.getSessionKey(), action['id']):
+                for s in self.__client.schedule.listInProgressSystems(action['id']):
                     if s['server_name'] == system:
                         return True
         return False
 
     def __createActionChain(self, label, system, errata, requiredReboot):
-        actionId = self.__client.getInstance().actionchain.createChain(
-            self.__client.getSessionKey(), label)
+        actionId = self.__client.actionchain.createChain(label)
         if actionId > 0:
             self.__addErrataToActionChain(system, errata, label)
             if requiredReboot or self.__systemErrataInspector.hasSuggestedReboot():
@@ -119,10 +138,10 @@ class SystemPatchingScheduler:
         errataIds = []
         for patch in errata:
             errataIds.append(patch['id'])
-        return self.__client.getInstance().actionchain.addErrataUpdate(self.__client.getSessionKey(), self.__systemErrataInspector.getSystemId(), errataIds, label)
+        return self.__client.actionchain.addErrataUpdate(self.__systemErrataInspector.getSystemId(), errataIds, label)
 
     def __addSystemRebootToActionChain(self, system, label):
-        return self.__client.getInstance().actionchain.addSystemReboot(self.__client.getSessionKey(), self.__systemErrataInspector.getSystemId(), label)
+        return self.__client.actionchain.addSystemReboot(self.__systemErrataInspector.getSystemId(), label)
 
 
 class SystemErrataInspector:
@@ -135,7 +154,7 @@ class SystemErrataInspector:
 
     def hasSuggestedReboot(self):
         for patch in self.obtainSystemErrata():
-            keywords = self.__client.getInstance().errata.listKeywords(self.__client.getSessionKey(), patch['advisory_name'])
+            keywords = self.__client.errata.listKeywords(patch['advisory_name'])
             if 'reboot_suggested' in keywords:
                 return True
         return False
@@ -144,14 +163,13 @@ class SystemErrataInspector:
         if self.__errata != []:
             return self.__errata
         if self.__advisoryType == AdvisoryType.ALL:
-            self.__errata = self.__client.getInstance().system.getRelevantErrata(self.__client.getSessionKey(), self.getSystemId())
+            self.__errata = self.__client.system.getRelevantErrata(self.getSystemId())
         else:
-            self.__errata = self.__client.getInstance().system.getRelevantErrataByType(self.__client.getSessionKey(),
-                self.getSystemId(), self.__advisoryType.value)
+            self.__errata = self.__client.system.getRelevantErrataByType(self.getSystemId(), self.__advisoryType.value)
         return self.__errata
 
     def getSystemId(self):
-        return self.__client.getInstance().system.getId(self.__client.getSessionKey(), self.__system)[0]['id']
+        return self.__client.system.getId(self.__system)[0]['id']
 
 
 class SystemListParser:
