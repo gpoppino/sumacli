@@ -94,8 +94,7 @@ class SystemPatchingScheduler:
             print("System '" + system + "' already has an action in progress for " + self.__date + ". Skipped...")
             return False
 
-        errata = self.__systemErrataInspector.obtainSystemErrata()
-        if errata == []:
+        if self.__systemErrataInspector.errata == []:
             print("No patches of type '" + self.__advisoryType.value +
                   "' available for system: " + system + " . Skipping...")
             return False
@@ -130,12 +129,10 @@ class SystemPatchingScheduler:
         actionId = self.__client.actionchain.createChain(label)
         if actionId > 0:
             if self.__systemErrataInspector.hasZypperPatches():
-                zypper_errata = self.__systemErrataInspector.obtainZypperPatches()
-                self.__addErrataToActionChain(zypper_errata, label)
+                self.__addErrataToActionChain(self.__systemErrataInspector.obtainZypperPatches(), label)
 
             if self.__systemErrataInspector.hasSaltPatches():
-                salt_errata = self.__systemErrataInspector.obtainSaltPatches()
-                self.__addErrataToActionChain(salt_errata, label)
+                self.__addErrataToActionChain(self.__systemErrataInspector.obtainSaltPatches(), label)
                 if self.__systemErrataInspector.hasSaltRestartSuggested():
                     self.__addScriptRunToActionChain("systemctl restart salt-minion", label)
 
@@ -169,34 +166,34 @@ class SystemErrataInspector:
         self.__system = system
         self.__advisoryType = advisoryType
         self.__errata = []
+        self.__isInitialized = False
 
     def hasRebootSuggested(self):
-        return self.__hasKeyword('reboot_suggested', self.__errata)
+        return self.__hasKeyword('reboot_suggested', self.errata)
 
     def hasRestartSuggested(self):
-        return self.__hasKeyword('restart_suggested', self.__errata)
+        return self.__hasKeyword('restart_suggested', self.errata)
 
     def hasSaltPatches(self):
-        for patch in self.__errata:
+        for patch in self.errata:
             if self.__hasInPatchSynopsis(['salt'], patch):
                 return True
         return False
 
     def hasZypperPatches(self):
-        for patch in self.__errata:
+        for patch in self.errata:
             if self.__hasInPatchSynopsis(['zypp', 'zlib'], patch):
                 return True
         return False
 
     def hasSaltRestartSuggested(self):
-        errata = self.obtainSaltPatches()
-        return self.__hasKeyword('restart_suggested', errata)
+        return self.__hasKeyword('restart_suggested', self.obtainSaltPatches())
 
     def obtainZypperPatches(self):
-        return self.__obtainErrataBySynopsisFilter(['zypp', 'zlib'], self.__errata)
+        return self.__obtainErrataBySynopsisFilter(['zypp', 'zlib'])
 
     def obtainSaltPatches(self):
-        return self.__obtainErrataBySynopsisFilter(['salt'], self.__errata)
+        return self.__obtainErrataBySynopsisFilter(['salt'])
 
     def __hasInPatchSynopsis(self, keywords, patch):
         synopsis = patch['advisory_synopsis'].lower()
@@ -205,16 +202,16 @@ class SystemErrataInspector:
                 return True
         return False
 
-    def __hasKeyword(self, k, errata):
-        for patch in errata:
+    def __hasKeyword(self, k, _errata):
+        for patch in _errata:
             keywords = self.__client.errata.listKeywords(patch['advisory_name'])
             if k in keywords:
                 return True
         return False
 
-    def __obtainErrataBySynopsisFilter(self, filter, errata, reverse=False):
+    def __obtainErrataBySynopsisFilter(self, filter, reverse=False):
         patches = []
-        for patch in errata:
+        for patch in self.errata:
             hasPatch = self.__hasInPatchSynopsis(filter, patch)
             if hasPatch and reverse:
                 continue
@@ -224,15 +221,19 @@ class SystemErrataInspector:
                 patches.append(patch)
         return patches
 
-    def obtainSystemErrata(self):
+    @property
+    def errata(self):
+        if self.__isInitialized:
+            return self.__errata
         if self.__advisoryType == AdvisoryType.ALL:
             self.__errata = self.__client.system.getRelevantErrata(self.getSystemId())
         else:
             self.__errata = self.__client.system.getRelevantErrataByType(self.getSystemId(), self.__advisoryType.value)
+        self.__isInitialized = True
         return self.__errata
 
     def obtainSystemErrataWithoutSoftwareStackPatches(self):
-        return self.__obtainErrataBySynopsisFilter(['zypp', 'zlib', 'salt'], self.obtainSystemErrata(), True)
+        return self.__obtainErrataBySynopsisFilter(['zypp', 'zlib', 'salt'], True)
 
     def getSystemId(self):
         return self.__client.system.getId(self.__system)[0]['id']
