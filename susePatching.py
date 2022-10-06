@@ -96,7 +96,12 @@ class SystemPatchingScheduler:
             self.__logger.error("System '" + self.__system + "' already has an action in progress for " + self.__date + ". Skipped...")
             return False
 
-        errata = self.__systemErrataInspector.obtainSystemErrata()
+        try:
+            errata = self.__systemErrataInspector.obtainSystemErrata()
+        except ValueError as err:
+            self.__logger.error(err)
+            return False
+
         if errata == []:
             self.__logger.warning("No patches of type '" + self.__advisoryType.value +
                   "' available for system: " + self.__system + " . Skipping...")
@@ -172,6 +177,8 @@ class SystemErrataInspector:
         return self.__errata
 
     def getSystemId(self):
+        if len(self.__client.system.getId(self.__system)) == 0:
+            raise ValueError("No such system: " + self.__system)
         return self.__client.system.getId(self.__system)[0]['id']
 
 
