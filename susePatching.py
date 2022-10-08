@@ -110,8 +110,7 @@ class SystemPatchingScheduler:
 
         label = self.__labelPrefix + "-" + self.__system + str(self.__date)
         try:
-            self.__createActionChain(
-                label, self.__system, errata, self.__rebootRequired, self.__noReboot)
+            self.__createActionChain(label, errata, self.__rebootRequired, self.__noReboot)
         except Fault as err:
             self.__logger.error("Failed to create action chain for system: " + self.__system)
             self.__logger.error("Fault code: %d" % err.faultCode)
@@ -135,21 +134,21 @@ class SystemPatchingScheduler:
                         return True
         return False
 
-    def __createActionChain(self, label, system, errata, requiredReboot, noReboot):
+    def __createActionChain(self, label, errata, requiredReboot, noReboot):
         actionId = self.__client.actionchain.createChain(label)
         if actionId > 0:
-            self.__addErrataToActionChain(system, errata, label)
+            self.__addErrataToActionChain(errata, label)
             if requiredReboot or self.__systemErrataInspector.hasSuggestedReboot() and not noReboot:
-                self.__addSystemRebootToActionChain(system, label)
+                self.__addSystemRebootToActionChain(label)
         return actionId
 
-    def __addErrataToActionChain(self, system, errata, label):
+    def __addErrataToActionChain(self, errata, label):
         errataIds = []
         for patch in errata:
             errataIds.append(patch['id'])
         return self.__client.actionchain.addErrataUpdate(self.__systemErrataInspector.getSystemId(), errataIds, label)
 
-    def __addSystemRebootToActionChain(self, system, label):
+    def __addSystemRebootToActionChain(self, label):
         return self.__client.actionchain.addSystemReboot(self.__systemErrataInspector.getSystemId(), label)
 
 
