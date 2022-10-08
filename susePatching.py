@@ -80,12 +80,13 @@ class SumaClient:
 
 class SystemPatchingScheduler:
 
-    def __init__(self, client, system, date, advisoryType, rebootRequired, labelPrefix):
+    def __init__(self, client, system, date, advisoryType, rebootRequired, noReboot, labelPrefix):
         self.__client = client
         self.__system = system
         self.__date = date
         self.__advisoryType = advisoryType
         self.__rebootRequired = rebootRequired
+        self.__noReboot = noReboot
         self.__labelPrefix = labelPrefix
         self.__systemErrataInspector = SystemErrataInspector(client, system, advisoryType)
         self.__logger = logging.getLogger(__name__)
@@ -110,7 +111,7 @@ class SystemPatchingScheduler:
         label = self.__labelPrefix + "-" + self.__system + str(self.__date)
         try:
             self.__createActionChain(
-                label, self.__system, errata, self.__rebootRequired)
+                label, self.__system, errata, self.__rebootRequired, self.__noReboot)
         except Fault as err:
             self.__logger.error("Failed to create action chain for system: " + self.__system)
             self.__logger.error("Fault code: %d" % err.faultCode)
@@ -134,11 +135,11 @@ class SystemPatchingScheduler:
                         return True
         return False
 
-    def __createActionChain(self, label, system, errata, requiredReboot):
+    def __createActionChain(self, label, system, errata, requiredReboot, noReboot):
         actionId = self.__client.actionchain.createChain(label)
         if actionId > 0:
             self.__addErrataToActionChain(system, errata, label)
-            if requiredReboot or self.__systemErrataInspector.hasSuggestedReboot():
+            if requiredReboot or self.__systemErrataInspector.hasSuggestedReboot() and not noReboot:
                 self.__addSystemRebootToActionChain(system, label)
         return actionId
 
@@ -226,8 +227,11 @@ if __name__ == "__main__":
         "filename", help="Name of the file in which systems and their schedules for patching are listed.")
     parser.add_argument(
         "-a", "--allpatches", help="Apply all available patches to each system.", action="store_true")
-    parser.add_argument(
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
         "-r", "--reboot", help="Add a system reboot to each action chain for each system.", action="store_true")
+    group.add_argument(
+        "-n", "--noreboot", help="Do not add a system reboot to the action chain of every system even if suggested by a patch.", action="store_true")
     args = parser.parse_args()
 
     logging.config.fileConfig('logging.conf')
@@ -252,7 +256,7 @@ if __name__ == "__main__":
             continue
         for system in systems[date]:
             patchingScheduler = SystemPatchingScheduler(
-                client, system, date, AdvisoryType.ALL if args.allpatches else AdvisoryType.SECURITY, args.reboot, "patching")
+                client, system, date, AdvisoryType.ALL if args.allpatches else AdvisoryType.SECURITY, args.reboot, args.noreboot, "patching")
             if patchingScheduler.schedule():
                 logger.info("SUCCESS => " + system + " scheduled successfully for " +
                       patchingScheduler.getAdvisoryType().value + " patching at " + date)
