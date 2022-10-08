@@ -257,12 +257,12 @@ if __name__ == "__main__":
             patchingScheduler = SystemPatchingScheduler(
                 client, system, date, AdvisoryType.ALL if args.allpatches else AdvisoryType.SECURITY, args.reboot, args.noreboot, "patching")
             if patchingScheduler.schedule():
-                logger.info("SUCCESS => " + system + " scheduled successfully for " +
-                      patchingScheduler.getAdvisoryType().value + " patching at " + date)
+                logger.info(system + " scheduled successfully for '" +
+                      patchingScheduler.getAdvisoryType().value + "' patching at " + date)
                 success_systems += 1
             else:
-                logger.error("FAILED => " + system + " failed to be scheduled for " +
-                      patchingScheduler.getAdvisoryType().value + " patching at " + date)
+                logger.error(system + " failed to be scheduled for '" +
+                      patchingScheduler.getAdvisoryType().value + "' patching at " + date)
                 failed_systems += 1
     client.logout()
     if failed_systems > 0 and success_systems > 0:
