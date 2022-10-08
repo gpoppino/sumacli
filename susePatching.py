@@ -94,7 +94,7 @@ class SystemPatchingScheduler:
     def schedule(self):
         scheduleDate = datetime.strptime(self.__date, "%Y-%m-%d %H:%M:%S")
         if self.__systemHasInProgressAction(self.__system, scheduleDate):
-            self.__logger.error("System '" + self.__system + "' already has an action in progress for " + self.__date + ". Skipped...")
+            self.__logger.error("System '" + self.__system + "' has already an action in progress for " + self.__date + ". Skipped...")
             return False
 
         try:
@@ -137,9 +137,11 @@ class SystemPatchingScheduler:
     def __createActionChain(self, label, errata, requiredReboot, noReboot):
         actionId = self.__client.actionchain.createChain(label)
         if actionId > 0:
-            self.__addErrataToActionChain(errata, label)
+            if self.__addErrataToActionChain(errata, label) > 0:
+                self.__logger.debug("Successfully added errata to action chain with label: " + label)
             if requiredReboot or self.__systemErrataInspector.hasSuggestedReboot() and not noReboot:
-                self.__addSystemRebootToActionChain(label)
+                if self.__addSystemRebootToActionChain(label) > 0:
+                    self.__logger.debug("Successfully added system reboot to action chain with label: " + label)
         return actionId
 
     def __addErrataToActionChain(self, errata, label):
@@ -257,11 +259,11 @@ if __name__ == "__main__":
             patchingScheduler = SystemPatchingScheduler(
                 client, system, date, AdvisoryType.ALL if args.allpatches else AdvisoryType.SECURITY, args.reboot, args.noreboot, "patching")
             if patchingScheduler.schedule():
-                logger.info(system + " scheduled successfully for '" +
+                logger.info("System '" + system + "' scheduled successfully for '" +
                       patchingScheduler.getAdvisoryType().value + "' patching at " + date)
                 success_systems += 1
             else:
-                logger.error(system + " failed to be scheduled for '" +
+                logger.error("System '" + system + "' failed to be scheduled for '" +
                       patchingScheduler.getAdvisoryType().value + "' patching at " + date)
                 failed_systems += 1
     client.logout()
