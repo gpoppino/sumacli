@@ -187,7 +187,8 @@ class SystemErrataInspector:
 
 class SystemListParser:
 
-    def __init__(self, systems_filename):
+    def __init__(self, client, systems_filename):
+        self.__client = client
         self.__filename = systems_filename
         self.__systems = {}
         self.__logger = logging.getLogger(__name__)
@@ -202,6 +203,15 @@ class SystemListParser:
     def get_systems(self):
         return self.__systems
 
+    def _get_systems_from_group(self, group):
+        try:
+            systems = self.__client.systemgroup.listSystems(group)
+        except Fault as err:
+            self.__logger.error(err.faultString)
+            self.__logger.warning(f'Group "{group}" does not exist!')
+            return []
+        return systems
+
     def _add_system(self, line):
         if len(line.strip()) == 0:
             return False
@@ -213,5 +223,12 @@ class SystemListParser:
         d = d.strip()
         if d not in self.__systems.keys():
             self.__systems[d] = []
-        self.__systems[d].append(s)
+        if ":" in s:
+            group = s.split(':')[1]
+            systems = self._get_systems_from_group(group)
+            systems = [s.get('profile_name') for s in systems]
+            for s in systems:
+                self.__systems[d].append(s)
+        else:
+            self.__systems[d].append(s)
         return True

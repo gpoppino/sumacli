@@ -30,18 +30,19 @@ if __name__ == "__main__":
     logging.config.fileConfig('logging.conf')
     logger = logging.getLogger(__name__)
 
-    systems = susepatching.SystemListParser(args.filename).parse()
+    client = susepatching.SumaClient()
+    client.login()
+    systems = susepatching.SystemListParser(client, args.filename).parse()
     if systems == {}:
         logger.error("No systems found in file: " + args.filename)
         logger.error("The format of the file is: systemName,year-month-day hour:minute:second")
         logger.error("Example: suma-client,2021-11-06 10:00:00")
+        client.logout()
         sys.exit(66)
 
     exit_code = 0
     failed_systems = 0
     success_systems = 0
-    client = susepatching.SumaClient()
-    client.login()
     for date in systems.keys():
         if datetime.strptime(date, "%Y-%m-%d %H:%M:%S") < datetime.now():
             logger.warning("Date " + date +
@@ -50,8 +51,8 @@ if __name__ == "__main__":
         for system in systems[date]:
             patchingScheduler = susepatching.SystemPatchingScheduler(
                 client, system, date,
-                susepatching.AdvisoryType.ALL if args.allpatches else susepatching.AdvisoryType.SECURITY, args.reboot,
-                args.noreboot, "patching")
+                susepatching.AdvisoryType.ALL if args.all_patches else susepatching.AdvisoryType.SECURITY, args.reboot,
+                args.no_reboot, "patching")
             if patchingScheduler.schedule():
                 logger.info("System '" + system + "' scheduled successfully for '" +
                             patchingScheduler.get_advisory_type().value + "' patching at " + date)

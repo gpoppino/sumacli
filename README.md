@@ -9,6 +9,7 @@ The input this program receives, is a file as first argument that is structured 
 
 ```txt
 client-system-name,YYYY-mm-dd HH:MM:SS
+group:name-of-group,YYYY-mm-dd HH:MM:SS
 ```
 
 Where:
@@ -26,6 +27,7 @@ For example:
 instance-k3s-0,2021-11-06 10:00:00
 instance-k3s-1,2021-11-06 10:00:00
 instance-k3s-2,2021-11-13 11:00:00
+group:Build Hosts,2023-03-03 19:00:00
 ```
 
 This associates each system with a patching date and time when the patching will be scheduled. If the system has no pending patches, it will be skipped

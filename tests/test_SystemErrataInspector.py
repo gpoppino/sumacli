@@ -3,6 +3,7 @@ from unittest.mock import Mock
 from susepatching import AdvisoryType
 from susepatching import SystemErrataInspector
 
+
 class TestSystemErrataInspector(unittest.TestCase):
 
     def setUp(self):
