@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import Mock
-from susePatching import AdvisoryType
-from susePatching import SystemErrataInspector
+from susepatching import AdvisoryType
+from susepatching import SystemErrataInspector
 
 class TestSystemErrataInspector(unittest.TestCase):
 
@@ -16,7 +16,7 @@ class TestSystemErrataInspector(unittest.TestCase):
 
         systemErrataInspector = SystemErrataInspector(client, "mysystem.suse.local", AdvisoryType.ALL)
 
-        self.assertTrue(systemErrataInspector.hasSuggestedReboot())
+        self.assertTrue(systemErrataInspector.has_suggested_reboot())
 
     def test_doesNotHaveSuggestedReboot(self):
         client = Mock()
@@ -26,7 +26,7 @@ class TestSystemErrataInspector(unittest.TestCase):
 
         systemErrataInspector = SystemErrataInspector(client, "mysystem.suse.local", AdvisoryType.ALL)
 
-        self.assertFalse(systemErrataInspector.hasSuggestedReboot())
+        self.assertFalse(systemErrataInspector.has_suggested_reboot())
 
     def test_RaisesValueErrorNoSuchSystem(self):
         client = Mock()
@@ -35,4 +35,4 @@ class TestSystemErrataInspector(unittest.TestCase):
         systemErrataInspector = SystemErrataInspector(client, "mysystem.suse.local", AdvisoryType.ALL)
 
         with self.assertRaises(ValueError):
-            systemErrataInspector.getSystemId()
+            systemErrataInspector.get_system_id()

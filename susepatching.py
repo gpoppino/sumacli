@@ -7,16 +7,15 @@ from enum import Enum
 import logging.config
 import logging
 import configparser
-import argparse
 import ssl
-import sys
 
 
 class AdvisoryType(Enum):
     SECURITY = 'Security Advisory'
     BUGFIX = 'Bug Fix Advisory'
-    PRODUCT_ENHANCEMENT = 'Produt Enhancement Advisory'
-    # This is not a SUMA advisory type, but a flag to mark that we will patch the system with all patches available for it
+    PRODUCT_ENHANCEMENT = 'Product Enhancement Advisory'
+    # This is not a SUMA advisory type, but a flag to mark that we will patch the system
+    # with all patches available for it
     ALL = 'All Relevant Errata'
 
 
@@ -29,11 +28,11 @@ class _MultiCallMethod:
         return _MultiCallMethod(self.__client, "%s.%s" % (self.__name, name))
 
     def __call__(self, *args):
-        m = getattr(self.__client.getInstance(), self.__name)
+        m = getattr(self.__client.get_instance(), self.__name)
         if args == ():
-            return m(self.__client.getSessionKey())
+            return m(self.__client.get_session_key())
         else:
-            return m(self.__client.getSessionKey(), *args)
+            return m(self.__client.get_session_key(), *args)
 
 
 class SumaClient:
@@ -68,117 +67,119 @@ class SumaClient:
         self.__client("close")()
         self.__key = None
 
-    def isLoggedIn(self):
+    def is_logged_in(self):
         return self.__key is not None
 
-    def getSessionKey(self):
+    def get_session_key(self):
         return self.__key
 
-    def getInstance(self):
+    def get_instance(self):
         return self.__client
 
 
 class SystemPatchingScheduler:
 
-    def __init__(self, client, system, date, advisoryType, rebootRequired, noReboot, labelPrefix):
+    def __init__(self, client, system, date, advisory_type, reboot_required, no_reboot, label_prefix):
         self.__client = client
         self.__system = system
         self.__date = date
-        self.__advisoryType = advisoryType
-        self.__rebootRequired = rebootRequired
-        self.__noReboot = noReboot
-        self.__labelPrefix = labelPrefix
-        self.__systemErrataInspector = SystemErrataInspector(client, system, advisoryType)
+        self.__advisoryType = advisory_type
+        self.__rebootRequired = reboot_required
+        self.__noReboot = no_reboot
+        self.__labelPrefix = label_prefix
+        self.__systemErrataInspector = SystemErrataInspector(client, system, advisory_type)
         self.__logger = logging.getLogger(__name__)
 
     def schedule(self):
-        scheduleDate = datetime.strptime(self.__date, "%Y-%m-%d %H:%M:%S")
-        if self.__systemHasInProgressAction(self.__system, scheduleDate):
-            self.__logger.error("System '" + self.__system + "' has already an action in progress for " + self.__date + ". Skipped...")
+        schedule_date = datetime.strptime(self.__date, "%Y-%m-%d %H:%M:%S")
+        if self.__system_has_in_progress_action(self.__system, schedule_date):
+            self.__logger.error(
+                "System '" + self.__system + "' has already an action in progress for " + self.__date + ". Skipped...")
             return False
 
         try:
-            errata = self.__systemErrataInspector.obtainSystemErrata()
+            errata = self.__systemErrataInspector.obtain_system_errata()
         except ValueError as err:
             self.__logger.error(err)
             return False
 
-        if errata == []:
-            self.__logger.warning("No patches of type '" + self.__advisoryType.value +
-                  "' available for system: " + self.__system + " . Skipping...")
+        if not errata:
+            self.__logger.warning("No patches of type '" + self.__advisoryType.value + "' available for system: " +
+                                  self.__system + " . Skipping...")
             return False
 
         label = self.__labelPrefix + "-" + self.__system + str(self.__date)
         try:
-            self.__createActionChain(label, errata, self.__rebootRequired, self.__noReboot)
+            self.__create_action_chain(label, errata, self.__rebootRequired, self.__noReboot)
         except Fault as err:
             self.__logger.error("Failed to create action chain for system: " + self.__system)
             self.__logger.error("Fault code: %d" % err.faultCode)
             self.__logger.error("Fault string: %s" % err.faultString)
             return False
 
-        if self.__client.actionchain.scheduleChain(label, scheduleDate) == 1:
+        if self.__client.actionchain.scheduleChain(label, schedule_date) == 1:
             return True
         return False
 
-    def getAdvisoryType(self):
+    def get_advisory_type(self):
         return self.__advisoryType
 
-    def __systemHasInProgressAction(self, system, scheduleDate):
-        inProgressActions = self.__client.schedule.listInProgressActions()
-        for action in inProgressActions:
+    def __system_has_in_progress_action(self, system, schedule_date):
+        in_progress_actions = self.__client.schedule.listInProgressActions()
+        for action in in_progress_actions:
             converted = datetime.strptime(action['earliest'].value, "%Y%m%dT%H:%M:%S").isoformat()
-            if scheduleDate.isoformat() == converted:
+            if schedule_date.isoformat() == converted:
                 for s in self.__client.schedule.listInProgressSystems(action['id']):
                     if s['server_name'] == system:
                         return True
         return False
 
-    def __createActionChain(self, label, errata, requiredReboot, noReboot):
-        actionId = self.__client.actionchain.createChain(label)
-        if actionId > 0:
-            if self.__addErrataToActionChain(errata, label) > 0:
+    def __create_action_chain(self, label, errata, required_reboot, no_reboot):
+        action_id = self.__client.actionchain.createChain(label)
+        if action_id > 0:
+            if self.__add_errata_to_action_chain(errata, label) > 0:
                 self.__logger.debug("Successfully added errata to action chain with label: " + label)
-            if requiredReboot or self.__systemErrataInspector.hasSuggestedReboot() and not noReboot:
-                if self.__addSystemRebootToActionChain(label) > 0:
+            if required_reboot or self.__systemErrataInspector.has_suggested_reboot() and not no_reboot:
+                if self.__add_system_reboot_to_action_chain(label) > 0:
                     self.__logger.debug("Successfully added system reboot to action chain with label: " + label)
-        return actionId
+        return action_id
 
-    def __addErrataToActionChain(self, errata, label):
-        errataIds = []
+    def __add_errata_to_action_chain(self, errata, label):
+        errata_ids = []
         for patch in errata:
-            errataIds.append(patch['id'])
-        return self.__client.actionchain.addErrataUpdate(self.__systemErrataInspector.getSystemId(), errataIds, label)
+            errata_ids.append(patch['id'])
+        return self.__client.actionchain.addErrataUpdate(self.__systemErrataInspector.get_system_id(), errata_ids, label)
 
-    def __addSystemRebootToActionChain(self, label):
-        return self.__client.actionchain.addSystemReboot(self.__systemErrataInspector.getSystemId(), label)
+    def __add_system_reboot_to_action_chain(self, label):
+        return self.__client.actionchain.addSystemReboot(self.__systemErrataInspector.get_system_id(), label)
 
 
 class SystemErrataInspector:
 
-    def __init__(self, client, system, advisoryType):
+    def __init__(self, client, system, advisory_type):
         self.__client = client
         self.__system = system
-        self.__advisoryType = advisoryType
+        self.__advisoryType = advisory_type
         self.__errata = []
 
-    def hasSuggestedReboot(self):
-        for patch in self.obtainSystemErrata():
+    def has_suggested_reboot(self):
+        for patch in self.obtain_system_errata():
             keywords = self.__client.errata.listKeywords(patch['advisory_name'])
             if 'reboot_suggested' in keywords:
                 return True
         return False
 
-    def obtainSystemErrata(self):
-        if self.__errata != []:
+    def obtain_system_errata(self):
+        if self.__errata:
             return self.__errata
         if self.__advisoryType == AdvisoryType.ALL:
-            self.__errata = self.__client.system.getRelevantErrata(self.getSystemId())
+            self.__errata = self.__client.system.getRelevantErrata(self.get_system_id())
         else:
-            self.__errata = self.__client.system.getRelevantErrataByType(self.getSystemId(), self.__advisoryType.value)
+            self.__errata = self.__client.system.getRelevantErrataByType(self.get_system_id(),
+                                                                         self.__advisoryType.value)
         return self.__errata
 
-    def getSystemId(self):
+    def get_system_id(self):
         if len(self.__client.system.getId(self.__system)) == 0:
             raise ValueError("No such system: " + self.__system)
         return self.__client.system.getId(self.__system)[0]['id']
@@ -186,22 +187,22 @@ class SystemErrataInspector:
 
 class SystemListParser:
 
-    def __init__(self, sFilename):
-        self.__filename = sFilename
+    def __init__(self, systems_filename):
+        self.__filename = systems_filename
         self.__systems = {}
         self.__logger = logging.getLogger(__name__)
 
     def parse(self):
         with open(self.__filename) as f:
             for line in f:
-                if not self._addSystem(line):
+                if not self._add_system(line):
                     self.__logger.error("Line skipped: " + line)
         return self.__systems
 
-    def getSystems(self):
+    def get_systems(self):
         return self.__systems
 
-    def _addSystem(self, line):
+    def _add_system(self, line):
         if len(line.strip()) == 0:
             return False
         try:
@@ -214,63 +215,3 @@ class SystemListParser:
             self.__systems[d] = []
         self.__systems[d].append(s)
         return True
-
-# Exit codes:
-# 0  success. every system has been scheduled for patching
-# 2  total failure. improper command line options passed
-# 64 partial failure. partial systems scheduling has failed
-# 65 total failure. all systems scheduling has failed
-# 66 total failure. all systems scheduling has failed due to improper input
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "filename", help="Name of the file in which systems and their schedules for patching are listed.")
-    parser.add_argument(
-        "-a", "--allpatches", help="Apply all available patches to each system.", action="store_true")
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument(
-        "-r", "--reboot", help="Add a system reboot to each action chain for each system.", action="store_true")
-    group.add_argument(
-        "-n", "--noreboot", help="Do not add a system reboot to the action chain of every system even if suggested by a patch.", action="store_true")
-    args = parser.parse_args()
-
-    logging.config.fileConfig('logging.conf')
-    logger = logging.getLogger(__name__)
-
-    systems = SystemListParser(args.filename).parse()
-    if systems == {}:
-        logger.error("No systems found in file: " + args.filename)
-        logger.error("The format of the file is: systemName,year-month-day hour:minute:second")
-        logger.error("Example: suma-client,2021-11-06 10:00:00")
-        sys.exit(66)
-
-    exit_code = 0
-    failed_systems = 0
-    success_systems = 0
-    client = SumaClient()
-    client.login()
-    for date in systems.keys():
-        if datetime.strptime(date, "%Y-%m-%d %H:%M:%S") < datetime.now():
-            logger.warning("Date " + date +
-                  " is in the past! System(s) skipped: " + str(systems[date]))
-            continue
-        for system in systems[date]:
-            patchingScheduler = SystemPatchingScheduler(
-                client, system, date, AdvisoryType.ALL if args.allpatches else AdvisoryType.SECURITY, args.reboot, args.noreboot, "patching")
-            if patchingScheduler.schedule():
-                logger.info("System '" + system + "' scheduled successfully for '" +
-                      patchingScheduler.getAdvisoryType().value + "' patching at " + date)
-                success_systems += 1
-            else:
-                logger.error("System '" + system + "' failed to be scheduled for '" +
-                      patchingScheduler.getAdvisoryType().value + "' patching at " + date)
-                failed_systems += 1
-    client.logout()
-    if failed_systems > 0 and success_systems > 0:
-        exit_code = 64
-    elif failed_systems > 0 and success_systems == 0:
-        exit_code = 65
-    elif failed_systems == 0 and success_systems > 0:
-        exit_code = 0
-    sys.exit(exit_code)
