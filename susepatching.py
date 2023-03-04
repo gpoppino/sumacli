@@ -93,7 +93,7 @@ class SystemPatchingScheduler:
     def schedule(self):
         if self.__system_has_in_progress_action(self.__system, self.__date):
             self.__logger.error(
-                "System '" + self.__system + "' has already an action in progress for " + self.__date + ". Skipped...")
+                "System '" + self.__system + "' has already an action in progress for " + str(self.__date) + ". Skipped...")
             return False
 
         try:
