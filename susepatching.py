@@ -225,9 +225,7 @@ class SystemListParser:
         if ":" in s:
             group = s.split(':')[1]
             systems = self._get_systems_from_group(group)
-            systems = [s.get('profile_name') for s in systems]
-            for s in systems:
-                self.__systems[d].append(s)
+            [self.__systems[d].append(s.get('profile_name')) for s in systems]
         else:
             self.__systems[d].append(s)
         return True
