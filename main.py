@@ -51,15 +51,15 @@ if __name__ == "__main__":
             continue
         for system in systems[date]:
             patchingScheduler = susepatching.SystemPatchingScheduler(
-                client, system, schedule_date,
+                client, system.name, schedule_date,
                 susepatching.AdvisoryType.ALL if args.all_patches else susepatching.AdvisoryType.SECURITY, args.reboot,
                 args.no_reboot, "patching")
             if patchingScheduler.schedule():
-                logger.info("System '" + system + "' scheduled successfully for '" +
+                logger.info("System '" + system.name + "' scheduled successfully for '" +
                             patchingScheduler.get_advisory_type().value + "' patching at " + date)
                 success_systems += 1
             else:
-                logger.error("System '" + system + "' failed to be scheduled for '" +
+                logger.error("System '" + system.name + "' failed to be scheduled for '" +
                              patchingScheduler.get_advisory_type().value + "' patching at " + date)
                 failed_systems += 1
     client.logout()

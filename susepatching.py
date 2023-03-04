@@ -184,6 +184,20 @@ class SystemErrataInspector:
         return self.__client.system.getId(self.__system)[0]['id']
 
 
+class System:
+    def __init__(self, name, migration_target=None):
+        self.__name = name
+        self.__migration_target = migration_target
+
+    @property
+    def name(self):
+        return self.__name
+
+    @property
+    def migration_target(self):
+        return self.__migration_target
+
+
 class SystemListParser:
 
     def __init__(self, client, systems_filename):
@@ -215,17 +229,23 @@ class SystemListParser:
         if len(line.strip()) == 0:
             return False
         try:
-            s, d = line.split(',')
+            data = line.split(',')
         except ValueError:
             return False
-        s = s.strip()
-        d = d.strip()
+        if len(data) == 1 or len(data) > 3:
+            # system specified but no date or invalid data
+            return False
+        s = data[0].strip()
+        d = data[1].strip()
+        target = None
+        if len(data) == 3:
+            target = data[2]
         if d not in self.__systems.keys():
             self.__systems[d] = []
         if ":" in s:
             group = s.split(':')[1]
             systems = self._get_systems_from_group(group)
-            [self.__systems[d].append(s.get('profile_name')) for s in systems]
+            [self.__systems[d].append(System(s.get('profile_name'), target)) for s in systems]
         else:
-            self.__systems[d].append(s)
+            self.__systems[d].append(System(s, target))
         return True
