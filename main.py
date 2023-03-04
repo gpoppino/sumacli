@@ -44,13 +44,14 @@ if __name__ == "__main__":
     failed_systems = 0
     success_systems = 0
     for date in systems.keys():
-        if datetime.strptime(date, "%Y-%m-%d %H:%M:%S") < datetime.now():
+        schedule_date = datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
+        if schedule_date < datetime.now():
             logger.warning("Date " + date +
                            " is in the past! System(s) skipped: " + str(systems[date]))
             continue
         for system in systems[date]:
             patchingScheduler = susepatching.SystemPatchingScheduler(
-                client, system, date,
+                client, system, schedule_date,
                 susepatching.AdvisoryType.ALL if args.all_patches else susepatching.AdvisoryType.SECURITY, args.reboot,
                 args.no_reboot, "patching")
             if patchingScheduler.schedule():

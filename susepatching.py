@@ -91,8 +91,7 @@ class SystemPatchingScheduler:
         self.__logger = logging.getLogger(__name__)
 
     def schedule(self):
-        schedule_date = datetime.strptime(self.__date, "%Y-%m-%d %H:%M:%S")
-        if self.__system_has_in_progress_action(self.__system, schedule_date):
+        if self.__system_has_in_progress_action(self.__system, self.__date):
             self.__logger.error(
                 "System '" + self.__system + "' has already an action in progress for " + self.__date + ". Skipped...")
             return False
@@ -117,7 +116,7 @@ class SystemPatchingScheduler:
             self.__logger.error("Fault string: %s" % err.faultString)
             return False
 
-        if self.__client.actionchain.scheduleChain(label, schedule_date) == 1:
+        if self.__client.actionchain.scheduleChain(label, self.__date) == 1:
             return True
         return False
 
