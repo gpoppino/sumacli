@@ -1,5 +1,7 @@
 # Summary
-This script schedules the patching of SUMA client systems with action chains. An action chain for a client system includes the patching with only security patches by default and then a reboot, everything at a specified time and date.
+This script schedules the patching of SUMA client systems with action chains or a product migration to a
+higher service pack level. An action chain for a client system includes the patching with only security patches by
+default and then a reboot, everything at a specified date and time.
 
 If the patching fails for a system, the reboot is not run by the action chain.
 
@@ -10,6 +12,8 @@ The input this program receives, is a file as first argument that is structured 
 ```txt
 client-system-name,YYYY-mm-dd HH:MM:SS
 group:name-of-group,YYYY-mm-dd HH:MM:SS
+client-system-name2,YYYY-mm-dd HH:MM:SS,migration-target-label
+group:name-of-group2,YYYY-mm-dd HH:MM:SS,migration-target-label
 ```
 
 Where:
@@ -28,10 +32,13 @@ instance-k3s-0,2021-11-06 10:00:00
 instance-k3s-1,2021-11-06 10:00:00
 instance-k3s-2,2021-11-13 11:00:00
 group:Build Hosts,2023-03-03 19:00:00
+instance-sles15-sp3,2023-03-06 20:00:00,sle-product-sles15-sp4-pool-x86_64
+group:sles15-sp4-systems,2023-03-06 21:00:00,sle-product-sles15-sp5-pool-x86_64
 ```
 
-This associates each system with a patching date and time when the patching will be scheduled. If the system has no pending patches, it will be skipped
-and no action chain will be created for it.
+This associates each system with a patching date and time when the patching will be scheduled. If the system has no
+pending patches, it will be skipped and no action chain will be created for it. In case there is a third argument
+with a product target label, a product migration will be scheduled for the system.
 
 ## Configuration
 
