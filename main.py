@@ -46,22 +46,30 @@ if __name__ == "__main__":
     for date in systems.keys():
         schedule_date = datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
         if schedule_date < datetime.now():
-            logger.warning("Date " + date +
-                           " is in the past! System(s) skipped: " + str(systems[date]))
+            logger.warning(f"Date {date} is in the past! System(s) skipped: {str(systems[date])}")
             continue
         for system in systems[date]:
-            patchingScheduler = susepatching.SystemPatchingScheduler(
-                client, system.name, schedule_date,
-                susepatching.AdvisoryType.ALL if args.all_patches else susepatching.AdvisoryType.SECURITY, args.reboot,
-                args.no_reboot, "patching")
-            if patchingScheduler.schedule():
-                logger.info("System '" + system.name + "' scheduled successfully for '" +
-                            patchingScheduler.get_advisory_type().value + "' patching at " + date)
-                success_systems += 1
+            if system.migration_target:
+                productMigrationScheduler = susepatching.SystemProductMigrationScheduler(client, system, schedule_date)
+                if productMigrationScheduler.schedule():
+                    logger.info(f"System {system.name} scheduled successfully for product migration at {date}")
+                    success_systems += 1
+                else:
+                    logger.error(f"System {system.name} failed to be scheduled for product migration at {date}")
+                    failed_systems += 1
             else:
-                logger.error("System '" + system.name + "' failed to be scheduled for '" +
-                             patchingScheduler.get_advisory_type().value + "' patching at " + date)
-                failed_systems += 1
+                patchingScheduler = susepatching.SystemPatchingScheduler(
+                    client, system, schedule_date,
+                    susepatching.AdvisoryType.ALL if args.all_patches else susepatching.AdvisoryType.SECURITY,
+                    args.reboot, args.no_reboot, "patching")
+                if patchingScheduler.schedule():
+                    logger.info(f"System {system.name} scheduled successfully for "
+                                f"{patchingScheduler.get_advisory_type().value} patching at {date}")
+                    success_systems += 1
+                else:
+                    logger.error(f"System {system.name} failed to be scheduled for "
+                                 f"{patchingScheduler.get_advisory_type().value} patching at {date}")
+                    failed_systems += 1
     client.logout()
 
     if failed_systems > 0 and success_systems > 0:

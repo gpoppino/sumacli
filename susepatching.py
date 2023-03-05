@@ -91,9 +91,8 @@ class SystemPatchingScheduler:
         self.__logger = logging.getLogger(__name__)
 
     def schedule(self):
-        if self.__system_has_in_progress_action(self.__system, self.__date):
-            self.__logger.error(
-                "System '" + self.__system + "' has already an action in progress for " + str(self.__date) + ". Skipped...")
+        if self.__system_has_in_progress_action(self.__system.name, self.__date):
+            self.__logger.error(f"System {self.__system.name} already has an action in progress at {str(self.__date)}")
             return False
 
         try:
@@ -104,14 +103,14 @@ class SystemPatchingScheduler:
 
         if not errata:
             self.__logger.warning("No patches of type '" + self.__advisoryType.value + "' available for system: " +
-                                  self.__system + " . Skipping...")
+                                  self.__system.name + " . Skipping...")
             return False
 
-        label = self.__labelPrefix + "-" + self.__system + str(self.__date)
+        label = self.__labelPrefix + "-" + self.__system.name + str(self.__date)
         try:
             self.__create_action_chain(label, errata, self.__rebootRequired, self.__noReboot)
         except Fault as err:
-            self.__logger.error("Failed to create action chain for system: " + self.__system)
+            self.__logger.error("Failed to create action chain for system: " + self.__system.name)
             self.__logger.error("Fault code: %d" % err.faultCode)
             self.__logger.error("Fault string: %s" % err.faultString)
             return False
@@ -147,10 +146,10 @@ class SystemPatchingScheduler:
         errata_ids = []
         for patch in errata:
             errata_ids.append(patch['id'])
-        return self.__client.actionchain.addErrataUpdate(self.__systemErrataInspector.get_system_id(), errata_ids, label)
+        return self.__client.actionchain.addErrataUpdate(self.__system.get_id(self.__client), errata_ids, label)
 
     def __add_system_reboot_to_action_chain(self, label):
-        return self.__client.actionchain.addSystemReboot(self.__systemErrataInspector.get_system_id(), label)
+        return self.__client.actionchain.addSystemReboot(self.__system.get_id(self.__client), label)
 
 
 class SystemErrataInspector:
@@ -172,16 +171,32 @@ class SystemErrataInspector:
         if self.__errata:
             return self.__errata
         if self.__advisoryType == AdvisoryType.ALL:
-            self.__errata = self.__client.system.getRelevantErrata(self.get_system_id())
+            self.__errata = self.__client.system.getRelevantErrata(self.__system.get_id(self.__client))
         else:
-            self.__errata = self.__client.system.getRelevantErrataByType(self.get_system_id(),
+            self.__errata = self.__client.system.getRelevantErrataByType(self.__system.get_id(self.__client),
                                                                          self.__advisoryType.value)
         return self.__errata
 
-    def get_system_id(self):
-        if len(self.__client.system.getId(self.__system)) == 0:
-            raise ValueError("No such system: " + self.__system)
-        return self.__client.system.getId(self.__system)[0]['id']
+
+class SystemProductMigrationScheduler:
+    def __init__(self, client, system, date):
+        self.__client = client
+        self.__system = system
+        self.__date = date
+        self.__logger = logging.getLogger(__name__)
+
+    def schedule(self):
+        try:
+            action_id = self.__client.system.scheduleProductMigration(self.__system.get_id(self.__client),
+                                                                      self.__system.migration_target, [], False,
+                                                                      self.__date)
+            self.__logger.debug(f"Successfully scheduled product migration with action ID {action_id}")
+        except Fault as err:
+            self.__logger.error(f"Failed to schedule product migration for system {self.__system.name}")
+            self.__logger.error("Fault code: %d" % err.faultCode)
+            self.__logger.error("Fault string: %s" % err.faultString)
+            return False
+        return True
 
 
 class System:
@@ -196,6 +211,12 @@ class System:
     @property
     def migration_target(self):
         return self.__migration_target
+
+    def get_id(self, client):
+        system_id = client.system.getId(self.__name)
+        if len(system_id) == 0:
+            raise ValueError("No such system: " + self.__name)
+        return system_id[0]['id']
 
 
 class SystemListParser:
