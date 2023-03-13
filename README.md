@@ -14,6 +14,8 @@ client-system-name,YYYY-mm-dd HH:MM:SS
 group:name-of-group,YYYY-mm-dd HH:MM:SS
 client-system-name2,YYYY-mm-dd HH:MM:SS,migration-target-label
 group:name-of-group2,YYYY-mm-dd HH:MM:SS,migration-target-label
+client-system-name3,now
+group:name-of-group3,now
 ```
 
 Where:
@@ -25,15 +27,19 @@ Where:
 * MM = Minutes
 * SS = Seconds
 
+or
+
+* now = execution at the earliest time
+
 For example:
 
 ```txt
-instance-k3s-0,2021-11-06 10:00:00
-instance-k3s-1,2021-11-06 10:00:00
-instance-k3s-2,2021-11-13 11:00:00
-group:Build Hosts,2023-03-03 19:00:00
+instance-k3s-0,now
+instance-k3s-1,2023-03-06 10:00:00
+instance-k3s-2,2023-03-13 11:00:00
+group:Build Hosts,2023-03-06 19:00:00
 instance-sles15-sp3,2023-03-06 20:00:00,sle-product-sles15-sp4-pool-x86_64
-group:sles15-sp4-systems,2023-03-06 21:00:00,sle-product-sles15-sp5-pool-x86_64
+group:sles15-sp4-systems,now,sle-product-sles15-sp5-pool-x86_64
 ```
 
 This associates each system with a patching date and time when the patching will be scheduled. If the system has no
