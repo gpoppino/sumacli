@@ -1,9 +1,10 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging.config
 import susepatching
 import logging
 import argparse
 import sys
+
 
 # Exit codes:
 # 0  success. every system has been scheduled for patching
@@ -44,9 +45,11 @@ if __name__ == "__main__":
     failed_systems = 0
     success_systems = 0
     for date in systems.keys():
-        schedule_date = datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
-        if schedule_date < datetime.now():
-            logger.warning(f"Date {date} is in the past! System(s) skipped: {str(systems[date])}")
+        schedule_date = datetime.now() if date == "now" else datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
+        delta = timedelta(seconds=5)
+        if schedule_date + delta < datetime.now():
+            system_names = [s.name for s in systems[date]]
+            logger.warning(f"Date {date} is in the past! System(s) skipped: {system_names}")
             continue
         for system in systems[date]:
             if system.migration_target:
