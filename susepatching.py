@@ -77,7 +77,12 @@ class SumaClient:
         return self.__client
 
 
-class SystemPatchingScheduler:
+class Scheduler:
+    def schedule(self):
+        pass
+
+
+class SystemPatchingScheduler(Scheduler):
 
     def __init__(self, client, system, date, advisory_type, reboot_required, no_reboot, label_prefix):
         self.__client = client
@@ -93,31 +98,31 @@ class SystemPatchingScheduler:
     def schedule(self):
         if self.__system_has_in_progress_action(self.__system.name, self.__date):
             self.__logger.error(f"System {self.__system.name} already has an action in progress at {str(self.__date)}")
-            return False
+            return -1
 
         try:
             errata = self.__systemErrataInspector.obtain_system_errata()
         except ValueError as err:
             self.__logger.error(err)
-            return False
+            return -1
 
         if not errata:
             self.__logger.warning("No patches of type '" + self.__advisoryType.value + "' available for system: " +
                                   self.__system.name + " . Skipping...")
-            return False
+            return -1
 
         label = self.__labelPrefix + "-" + self.__system.name + str(self.__date)
         try:
-            self.__create_action_chain(label, errata, self.__rebootRequired, self.__noReboot)
+            action_id = self.__create_action_chain(label, errata, self.__rebootRequired, self.__noReboot)
         except Fault as err:
             self.__logger.error("Failed to create action chain for system: " + self.__system.name)
             self.__logger.error("Fault code: %d" % err.faultCode)
             self.__logger.error("Fault string: %s" % err.faultString)
-            return False
+            return -1
 
         if self.__client.actionchain.scheduleChain(label, self.__date) == 1:
-            return True
-        return False
+            return action_id
+        return -1
 
     def get_advisory_type(self):
         return self.__advisoryType
@@ -178,7 +183,7 @@ class SystemErrataInspector:
         return self.__errata
 
 
-class SystemProductMigrationScheduler:
+class SystemProductMigrationScheduler(Scheduler):
     def __init__(self, client, system, date):
         self.__client = client
         self.__system = system
@@ -195,8 +200,8 @@ class SystemProductMigrationScheduler:
             self.__logger.error(f"Failed to schedule product migration for system {self.__system.name}")
             self.__logger.error("Fault code: %d" % err.faultCode)
             self.__logger.error("Fault string: %s" % err.faultString)
-            return False
-        return True
+            return -1
+        return action_id
 
 
 class System:

@@ -1,9 +1,29 @@
 from datetime import datetime, timedelta
+from susepatching import AdvisoryType
 import logging.config
 import susepatching
 import logging
 import argparse
 import sys
+
+
+def perform_scheduling(scheduler, system, date):
+    logger = logging.getLogger(__name__)
+    action_id = scheduler.schedule()
+    if action_id > 0:
+        if isinstance(scheduler, susepatching.SystemProductMigrationScheduler):
+            logger.info(f"System {system.name} scheduled successfully for product migration at {date}")
+        elif isinstance(scheduler, susepatching.SystemPatchingScheduler):
+            logger.info(f"System {system.name} scheduled successfully for "
+                        f"{scheduler.get_advisory_type().value} patching at {date}")
+    else:
+        if isinstance(scheduler, susepatching.SystemProductMigrationScheduler):
+            logger.error(f"System {system.name} failed to be scheduled for product migration at {date}")
+        elif isinstance(scheduler, susepatching.SystemPatchingScheduler):
+            logger.error(f"System {system.name} failed to be scheduled for "
+                         f"{scheduler.get_advisory_type().value} patching at {date}")
+        return False
+    return True
 
 
 # Exit codes:
@@ -13,7 +33,7 @@ import sys
 # 65 total failure. all systems scheduling has failed
 # 66 total failure. all systems scheduling has failed due to improper input
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "filename", help="Name of the file in which systems and their schedules for patching are listed.")
@@ -53,26 +73,17 @@ if __name__ == "__main__":
             continue
         for system in systems[date]:
             if system.migration_target:
-                productMigrationScheduler = susepatching.SystemProductMigrationScheduler(client, system, schedule_date)
-                if productMigrationScheduler.schedule():
-                    logger.info(f"System {system.name} scheduled successfully for product migration at {date}")
-                    success_systems += 1
-                else:
-                    logger.error(f"System {system.name} failed to be scheduled for product migration at {date}")
-                    failed_systems += 1
+                scheduler = susepatching.SystemProductMigrationScheduler(client, system, schedule_date)
             else:
-                patchingScheduler = susepatching.SystemPatchingScheduler(
-                    client, system, schedule_date,
-                    susepatching.AdvisoryType.ALL if args.all_patches else susepatching.AdvisoryType.SECURITY,
-                    args.reboot, args.no_reboot, "patching")
-                if patchingScheduler.schedule():
-                    logger.info(f"System {system.name} scheduled successfully for "
-                                f"{patchingScheduler.get_advisory_type().value} patching at {date}")
-                    success_systems += 1
-                else:
-                    logger.error(f"System {system.name} failed to be scheduled for "
-                                 f"{patchingScheduler.get_advisory_type().value} patching at {date}")
-                    failed_systems += 1
+                advisory_type = AdvisoryType.ALL if args.all_patches else AdvisoryType.SECURITY
+                scheduler = susepatching.SystemPatchingScheduler(client, system, schedule_date, advisory_type,
+                                                                 args.reboot, args.no_reboot, "patching")
+
+            retval = perform_scheduling(scheduler, system, date)
+            if retval:
+                success_systems += 1
+            else:
+                failed_systems += 1
     client.logout()
 
     if failed_systems > 0 and success_systems > 0:
@@ -82,3 +93,7 @@ if __name__ == "__main__":
     elif failed_systems == 0 and success_systems > 0:
         exit_code = 0
     sys.exit(exit_code)
+
+
+if __name__ == "__main__":
+    main()
