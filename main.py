@@ -22,8 +22,7 @@ def perform_scheduling(scheduler, system, date):
         elif isinstance(scheduler, susepatching.SystemPatchingScheduler):
             logger.error(f"System {system.name} failed to be scheduled for "
                          f"{scheduler.get_advisory_type().value} patching at {date}")
-        return False
-    return True
+    return action_id
 
 
 # Exit codes:
@@ -39,6 +38,7 @@ def main():
         "filename", help="Name of the file in which systems and their schedules for patching are listed.")
     parser.add_argument(
         "-a", "--all-patches", help="Apply all available patches to each system.", action="store_true")
+    parser.add_argument("-s", "--save-action-ids-file", help="File name to save action IDs of scheduled jobs.")
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
         "-r", "--reboot", help="Add a system reboot to each action chain for each system.", action="store_true")
@@ -64,6 +64,7 @@ def main():
     exit_code = 0
     failed_systems = 0
     success_systems = 0
+    action_id_file_manager = susepatching.ActionIDFileManager(args.save_action_ids_file)
     for date in systems.keys():
         schedule_date = datetime.now() if date == "now" else datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
         delta = timedelta(seconds=5)
@@ -79,11 +80,14 @@ def main():
                 scheduler = susepatching.SystemPatchingScheduler(client, system, schedule_date, advisory_type,
                                                                  args.reboot, args.no_reboot, "patching")
 
-            retval = perform_scheduling(scheduler, system, date)
-            if retval:
+            action_id = perform_scheduling(scheduler, system, date)
+            if action_id > 0:
+                action_id_file_manager.append(action_id)
                 success_systems += 1
             else:
                 failed_systems += 1
+    action_id_file_manager.save()
+    logger.info(f"Action IDs file saved: {action_id_file_manager.get_filename()}")
     client.logout()
 
     if failed_systems > 0 and success_systems > 0:

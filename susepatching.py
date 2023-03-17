@@ -8,6 +8,7 @@ import logging.config
 import logging
 import configparser
 import ssl
+import time
 
 
 class AdvisoryType(Enum):
@@ -275,3 +276,34 @@ class SystemListParser:
         else:
             self.__systems[d].append(System(s, target))
         return True
+
+
+class ActionIDFileManager:
+
+    def __init__(self, action_id_filename):
+        self.__action_ids = []
+        self.__logger = logging.getLogger(__name__)
+        self.__action_id_filename = action_id_filename
+        if action_id_filename is None:
+            self.__action_id_filename = "action_ids." + datetime.fromtimestamp(time.time()).isoformat()
+
+    def read(self):
+        with open(self.__action_id_filename) as f:
+            for line in f:
+                self.__action_ids.append(line)
+        return self.__action_ids
+
+    def append(self, action_id):
+        self.__action_ids.append(action_id)
+
+    def save(self):
+        with open(self.__action_id_filename, "w") as f:
+            data = [str(action_id) + "\n" for action_id in self.__action_ids]
+            f.writelines(data)
+            self.__logger.debug(f"Action IDs file created: {self.__action_id_filename}")
+
+    def get_action_ids(self):
+        return self.__action_ids
+
+    def get_filename(self):
+        return self.__action_id_filename
