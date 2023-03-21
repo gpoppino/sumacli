@@ -4,3 +4,4 @@ config.ini
 __pycache__
 *.log
 .idea
+action_ids.*

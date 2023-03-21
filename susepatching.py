@@ -8,7 +8,6 @@ import logging.config
 import logging
 import configparser
 import ssl
-import time
 
 
 class AdvisoryType(Enum):
@@ -99,22 +98,22 @@ class SystemPatchingScheduler(Scheduler):
     def schedule(self):
         if self.__system_has_in_progress_action(self.__system.name, self.__date):
             self.__logger.error(f"System {self.__system.name} already has an action in progress at {str(self.__date)}")
-            return -1
+            return None
 
         try:
             errata = self.__systemErrataInspector.obtain_system_errata()
         except ValueError as err:
             self.__logger.error(err)
-            return -1
+            return None
 
         if not errata:
             self.__logger.warning("No patches of type '" + self.__advisoryType.value + "' available for system: " +
                                   self.__system.name + " . Skipping...")
-            return -1
+            return None
 
         label = self.__labelPrefix + "-" + self.__system.name + str(self.__date)
         try:
-            action_id = self.__create_action_chain(label, errata, self.__rebootRequired, self.__noReboot)
+            action_ids = self.__create_action_chain(label, errata, self.__rebootRequired, self.__noReboot)
         except Fault as err:
             self.__logger.error("Failed to create action chain for system: " + self.__system.name)
             self.__logger.error("Fault code: %d" % err.faultCode)
@@ -122,8 +121,8 @@ class SystemPatchingScheduler(Scheduler):
             return -1
 
         if self.__client.actionchain.scheduleChain(label, self.__date) == 1:
-            return action_id
-        return -1
+            return action_ids
+        return None
 
     def get_advisory_type(self):
         return self.__advisoryType
@@ -139,14 +138,18 @@ class SystemPatchingScheduler(Scheduler):
         return False
 
     def __create_action_chain(self, label, errata, required_reboot, no_reboot):
-        action_id = self.__client.actionchain.createChain(label)
-        if action_id > 0:
-            if self.__add_errata_to_action_chain(errata, label) > 0:
+        action_ids = []
+        if self.__client.actionchain.createChain(label) > 0:
+            errata_action_id = self.__add_errata_to_action_chain(errata, label)
+            if errata_action_id > 0:
+                action_ids.append(errata_action_id)
                 self.__logger.debug("Successfully added errata to action chain with label: " + label)
             if required_reboot or self.__systemErrataInspector.has_suggested_reboot() and not no_reboot:
-                if self.__add_system_reboot_to_action_chain(label) > 0:
+                reboot_action_id = self.__add_system_reboot_to_action_chain(label)
+                if reboot_action_id > 0:
+                    action_ids.append(reboot_action_id)
                     self.__logger.debug("Successfully added system reboot to action chain with label: " + label)
-        return action_id
+        return action_ids
 
     def __add_errata_to_action_chain(self, errata, label):
         errata_ids = []
@@ -192,17 +195,18 @@ class SystemProductMigrationScheduler(Scheduler):
         self.__logger = logging.getLogger(__name__)
 
     def schedule(self):
+        action_ids = []
         try:
-            action_id = self.__client.system.scheduleProductMigration(self.__system.get_id(self.__client),
-                                                                      self.__system.migration_target, [], False,
-                                                                      self.__date)
-            self.__logger.debug(f"Successfully scheduled product migration with action ID {action_id}")
+            action_ids.append(self.__client.system.scheduleProductMigration(self.__system.get_id(self.__client),
+                                                                            self.__system.migration_target, [], False,
+                                                                            self.__date))
+            self.__logger.debug(f"Successfully scheduled product migration with action ID {action_ids}")
         except Fault as err:
             self.__logger.error(f"Failed to schedule product migration for system {self.__system.name}")
             self.__logger.error("Fault code: %d" % err.faultCode)
             self.__logger.error("Fault string: %s" % err.faultString)
-            return -1
-        return action_id
+            return None
+        return action_ids
 
 
 class System:
@@ -276,34 +280,3 @@ class SystemListParser:
         else:
             self.__systems[d].append(System(s, target))
         return True
-
-
-class ActionIDFileManager:
-
-    def __init__(self, action_id_filename):
-        self.__action_ids = []
-        self.__logger = logging.getLogger(__name__)
-        self.__action_id_filename = action_id_filename
-        if action_id_filename is None:
-            self.__action_id_filename = "action_ids." + datetime.fromtimestamp(time.time()).isoformat()
-
-    def read(self):
-        with open(self.__action_id_filename) as f:
-            for line in f:
-                self.__action_ids.append(line)
-        return self.__action_ids
-
-    def append(self, action_id):
-        self.__action_ids.append(action_id)
-
-    def save(self):
-        with open(self.__action_id_filename, "w") as f:
-            data = [str(action_id) + "\n" for action_id in self.__action_ids]
-            f.writelines(data)
-            self.__logger.debug(f"Action IDs file created: {self.__action_id_filename}")
-
-    def get_action_ids(self):
-        return self.__action_ids
-
-    def get_filename(self):
-        return self.__action_id_filename
