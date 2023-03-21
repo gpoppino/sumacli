@@ -68,8 +68,11 @@ Options:
 
 On the command line, run:
 
-`$ python3 main.py systems.csv`
+`$ python3 main.py patch systems.csv`
 
 The _systems.csv_ file has to be structured as described in the _Input_ section.
 
+To validate results, you may run:
+
+`$ python3 main.py validate -f action_ids_file`
 
