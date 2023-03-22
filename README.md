@@ -74,5 +74,5 @@ The _systems.csv_ file has to be structured as described in the _Input_ section.
 
 To validate results, you may run:
 
-`$ python3 main.py validate -f action_ids_file`
+`$ python3 main.py validate action_ids_file`
 
