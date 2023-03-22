@@ -100,7 +100,7 @@ def main():
     logging.config.fileConfig('logging.conf')
 
     parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers(required=True)
+    subparsers = parser.add_subparsers(required=True, dest="cmd")
 
     patching_parser = subparsers.add_parser("patch", help="Patches or migrates systems.")
     patching_parser.add_argument("patching_filename",
