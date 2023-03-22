@@ -85,7 +85,7 @@ def perform_patching(args):
 
 
 def perform_validation(args):
-    action_id_file_manager = validator.ActionIDFileManager(args.actions_file)
+    action_id_file_manager = validator.ActionIDFileManager(args.action_ids_filename)
 
     client = susepatching.SumaClient()
     client.login()
@@ -118,8 +118,7 @@ def main():
     patching_parser.set_defaults(func=perform_patching)
 
     validator_parser = subparsers.add_parser("validate", help="Validates results from actions file.")
-    validator_parser.add_argument("-f", "--actions-file", required=True,
-                                  help="Validate results of actions specified in file.")
+    validator_parser.add_argument("action_ids_filename", help="Validate results of actions specified in file.")
     validator_parser.set_defaults(func=perform_validation)
 
     args = parser.parse_args()
