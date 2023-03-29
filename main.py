@@ -92,8 +92,8 @@ def perform_suma_scheduling(factory, args):
                 success_systems += 1
             else:
                 failed_systems += 1
-    action_id_file_manager.save()
-    logger.info(f"Action IDs file saved: {action_id_file_manager.get_filename()}")
+    if action_id_file_manager.save():
+        logger.info(f"Action IDs file saved: {action_id_file_manager.get_filename()}")
     client.logout()
 
     if failed_systems > 0 and success_systems > 0:
