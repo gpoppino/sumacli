@@ -66,9 +66,13 @@ Options:
 
 ## How to run the script
 
-On the command line, run:
+On the command line, you may run:
 
 `$ python3 main.py patch systems.csv`
+
+or
+
+`$ python3 main.py migrate systems.csv`
 
 The _systems.csv_ file has to be structured as described in the _Input_ section.
 
