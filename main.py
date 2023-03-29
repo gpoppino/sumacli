@@ -8,6 +8,28 @@ import argparse
 import sys
 
 
+class SchedulerFactory:
+
+    def get_scheduler(self, client, system, schedule_date, args):
+        pass
+
+
+class PatchingSchedulerFactory(SchedulerFactory):
+    def get_scheduler(self, client, system, schedule_date, args):
+        advisory_type = AdvisoryType.ALL if args.all_patches else AdvisoryType.SECURITY
+        scheduler = susepatching.SystemPatchingScheduler(client, system, schedule_date, advisory_type, args.reboot,
+                                                         args.no_reboot, "patching")
+        return scheduler
+
+
+class ProductMigrationSchedulerFactory(SchedulerFactory):
+    def get_scheduler(self, client, system, schedule_date, args):
+        if system.migration_target is None:
+            raise ValueError(f"System {system.name} has no migration target")
+        scheduler = susepatching.SystemProductMigrationScheduler(client, system, schedule_date)
+        return scheduler
+
+
 def perform_scheduling(scheduler, system, date):
     logger = logging.getLogger(__name__)
     action_ids = scheduler.schedule()
@@ -33,14 +55,14 @@ def perform_scheduling(scheduler, system, date):
 # 65 total failure. all systems scheduling has failed
 # 66 total failure. all systems scheduling has failed due to improper input
 
-def perform_patching(args):
+def perform_suma_scheduling(factory, args):
     logger = logging.getLogger(__name__)
 
     client = susepatching.SumaClient()
     client.login()
-    systems = susepatching.SystemListParser(client, args.patching_filename).parse()
+    systems = susepatching.SystemListParser(client, args.filename).parse()
     if systems == {}:
-        logger.error("No systems found in file: " + args.patching_filename)
+        logger.error("No systems found in file: " + args.filename)
         logger.error("The format of the file is: systemName,year-month-day hour:minute:second")
         logger.error("Example: suma-client,2021-11-06 10:00:00")
         client.logout()
@@ -58,13 +80,12 @@ def perform_patching(args):
             logger.warning(f"Date {date} is in the past! System(s) skipped: {system_names}")
             continue
         for system in systems[date]:
-            if system.migration_target:
-                scheduler = susepatching.SystemProductMigrationScheduler(client, system, schedule_date)
-            else:
-                advisory_type = AdvisoryType.ALL if args.all_patches else AdvisoryType.SECURITY
-                scheduler = susepatching.SystemPatchingScheduler(client, system, schedule_date, advisory_type,
-                                                                 args.reboot, args.no_reboot, "patching")
-
+            try:
+                scheduler = factory.get_scheduler(client, system, schedule_date, args)
+            except ValueError as e:
+                logger.error(f"System {system.name} failed to be scheduled at {date}: {e}")
+                failed_systems += 1
+                continue
             action_ids = perform_scheduling(scheduler, system, date)
             if action_ids is not None:
                 action_id_file_manager.append(action_ids)
@@ -82,6 +103,16 @@ def perform_patching(args):
     elif failed_systems == 0 and success_systems > 0:
         exit_code = 0
     sys.exit(exit_code)
+
+
+def perform_patching(args):
+    factory = PatchingSchedulerFactory()
+    perform_suma_scheduling(factory, args)
+
+
+def perform_product_migration(args):
+    factory = ProductMigrationSchedulerFactory()
+    perform_suma_scheduling(factory, args)
 
 
 def perform_validation(args):
@@ -103,8 +134,8 @@ def main():
     subparsers = parser.add_subparsers(required=True, dest="cmd")
 
     patching_parser = subparsers.add_parser("patch", help="Patches or migrates systems.")
-    patching_parser.add_argument("patching_filename",
-                                 help="Filename of systems and their schedules for patching or migration.")
+    patching_parser.add_argument("filename",
+                                 help="Filename of systems and their schedules for patching.")
     patching_parser.add_argument(
         "-a", "--all-patches", help="Apply all available patches to each system.", action="store_true")
     patching_parser.add_argument("-s", "--save-action-ids-file", help="File name to save action IDs of scheduled jobs.")
@@ -116,6 +147,12 @@ def main():
         help="Do not add a system reboot to the action chain of every system even if suggested by a patch.",
         action="store_true")
     patching_parser.set_defaults(func=perform_patching)
+
+    migration_parser = subparsers.add_parser("migrate", help="Migrates systems to a new Service Pack.")
+    migration_parser.add_argument("filename", help="Filename of systems and their schedules for migration.")
+    migration_parser.add_argument("-s", "--save-action-ids-file",
+                                  help="File name to save action IDs of scheduled jobs.")
+    migration_parser.set_defaults(func=perform_product_migration)
 
     validator_parser = subparsers.add_parser("validate", help="Validates results from actions file.")
     validator_parser.add_argument("action_ids_filename", help="Validate results of actions specified in file.")
