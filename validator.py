@@ -75,6 +75,7 @@ class ActionIDValidator:
         action_ids = self.__action_id_file_manager.get_action_ids()
         systems = set()
         for action_id in action_ids:
+            s = None
             try:
                 s = func(action_id)
             except xmlrpc.client.Fault as err:
