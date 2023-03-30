@@ -21,13 +21,17 @@ class ActionIDFileManager:
         return self.__action_ids
 
     def append(self, action_id):
-        self.__action_ids.append(action_id)
+        if isinstance(action_id, list):
+            for x in action_id:
+                self.__action_ids.append(x)
+        else:
+            self.__action_ids.append(action_id)
 
     def save(self):
         if not self.__action_ids:
             return False
         with open(self.__action_id_filename, "w") as f:
-            data = [str(action_id) + "\n" for ids in self.__action_ids for action_id in ids]
+            data = [str(action_id) + "\n" for action_id in self.__action_ids]
             f.writelines(data)
             self.__logger.debug(f"Action IDs file created: {self.__action_id_filename}")
             return True
