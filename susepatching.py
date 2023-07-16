@@ -84,15 +84,15 @@ class Scheduler:
 
 class SystemPatchingScheduler(Scheduler):
 
-    def __init__(self, client, system, date, advisory_type, reboot_required, no_reboot, label_prefix):
+    def __init__(self, client, system, date, advisory_types, reboot_required, no_reboot, label_prefix):
         self.__client = client
         self.__system = system
         self.__date = date
-        self.__advisoryType = advisory_type
+        self.__advisoryTypes = advisory_types
         self.__rebootRequired = reboot_required
         self.__noReboot = no_reboot
         self.__labelPrefix = label_prefix
-        self.__systemErrataInspector = SystemErrataInspector(client, system, advisory_type)
+        self.__systemErrataInspector = SystemErrataInspector(client, system, advisory_types)
         self.__logger = logging.getLogger(__name__)
 
     def schedule(self):
@@ -107,8 +107,9 @@ class SystemPatchingScheduler(Scheduler):
             return None
 
         if not errata:
-            self.__logger.warning("No patches of type '" + self.__advisoryType.value + "' available for system: " +
-                                  self.__system.name + " . Skipping...")
+            advisory_types_descriptions = [t.value + " " for t in self.__advisoryTypes]
+            self.__logger.warning(f"No patches of type {advisory_types_descriptions} available for system: "
+                                  f"{self.__system.name} . Skipping...")
             return None
 
         label = self.__labelPrefix + "-" + self.__system.name + str(self.__date)
@@ -124,8 +125,8 @@ class SystemPatchingScheduler(Scheduler):
             return action_ids
         return None
 
-    def get_advisory_type(self):
-        return self.__advisoryType
+    def get_advisory_types(self):
+        return self.__advisoryTypes
 
     def __system_has_in_progress_action(self, system, schedule_date):
         in_progress_actions = self.__client.schedule.listInProgressActions()
@@ -163,10 +164,10 @@ class SystemPatchingScheduler(Scheduler):
 
 class SystemErrataInspector:
 
-    def __init__(self, client, system, advisory_type):
+    def __init__(self, client, system, advisory_types):
         self.__client = client
         self.__system = system
-        self.__advisoryType = advisory_type
+        self.__advisoryTypes = advisory_types
         self.__errata = []
 
     def has_suggested_reboot(self):
@@ -179,11 +180,13 @@ class SystemErrataInspector:
     def obtain_system_errata(self):
         if self.__errata:
             return self.__errata
-        if self.__advisoryType == AdvisoryType.ALL:
+
+        if AdvisoryType.ALL in self.__advisoryTypes:
             self.__errata = self.__client.system.getRelevantErrata(self.__system.get_id(self.__client))
         else:
-            self.__errata = self.__client.system.getRelevantErrataByType(self.__system.get_id(self.__client),
-                                                                         self.__advisoryType.value)
+            for advisoryType in self.__advisoryTypes:
+                self.__errata += self.__client.system.getRelevantErrataByType(self.__system.get_id(self.__client),
+                                                                              advisoryType.value)
         return self.__errata
 
 

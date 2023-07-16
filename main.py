@@ -16,8 +16,17 @@ class SchedulerFactory:
 
 class PatchingSchedulerFactory(SchedulerFactory):
     def get_scheduler(self, client, system, schedule_date, args):
-        advisory_type = AdvisoryType.ALL if args.all_patches else AdvisoryType.SECURITY
-        scheduler = susepatching.SystemPatchingScheduler(client, system, schedule_date, advisory_type, args.reboot,
+        advisory_types = []
+        if args.security:
+            advisory_types.append(AdvisoryType.SECURITY)
+        if args.bugfix:
+            advisory_types.append(AdvisoryType.BUGFIX)
+        if args.enhancement:
+            advisory_types.append(AdvisoryType.PRODUCT_ENHANCEMENT)
+        if args.all_patches:
+            advisory_types = [AdvisoryType.ALL]
+
+        scheduler = susepatching.SystemPatchingScheduler(client, system, schedule_date, advisory_types, args.reboot,
                                                          args.no_reboot, "patching")
         return scheduler
 
@@ -37,14 +46,16 @@ def perform_scheduling(scheduler, system, date):
         if isinstance(scheduler, susepatching.SystemProductMigrationScheduler):
             logger.info(f"System {system.name} scheduled successfully for product migration at {date}")
         elif isinstance(scheduler, susepatching.SystemPatchingScheduler):
+            advisory_types_description = [t.value + " " for t in scheduler.get_advisory_types()]
             logger.info(f"System {system.name} scheduled successfully for "
-                        f"{scheduler.get_advisory_type().value} patching at {date}")
+                        f"{advisory_types_description} patching at {date}")
     else:
         if isinstance(scheduler, susepatching.SystemProductMigrationScheduler):
             logger.error(f"System {system.name} failed to be scheduled for product migration at {date}")
         elif isinstance(scheduler, susepatching.SystemPatchingScheduler):
+            advisory_types_description = [t.value + " " for t in scheduler.get_advisory_types()]
             logger.error(f"System {system.name} failed to be scheduled for "
-                         f"{scheduler.get_advisory_type().value} patching at {date}")
+                         f"{advisory_types_description} patching at {date}")
     return action_ids
 
 
@@ -138,7 +149,13 @@ def main():
                                  help="Filename of systems and their schedules for patching.")
     patching_parser.add_argument(
         "-a", "--all-patches", help="Apply all available patches to each system.", action="store_true")
-    patching_parser.add_argument("-s", "--save-action-ids-file", help="File name to save action IDs of scheduled jobs.")
+    patching_parser.add_argument('-b', "--bugfix", help="Apply bug fix patches to each system.",
+                                 action="store_true")
+    patching_parser.add_argument('-e', "--enhancement", help="Apply product enhancement patches to each system.",
+                                 action="store_true")
+    patching_parser.add_argument('-s', "--security", help="Apply security patches to each system.",
+                                 action="store_true")
+    patching_parser.add_argument("-f", "--save-action-ids-file", help="File name to save action IDs of scheduled jobs.")
     group = patching_parser.add_mutually_exclusive_group()
     group.add_argument(
         "-r", "--reboot", help="Add a system reboot to each action chain for each system.", action="store_true")
@@ -150,7 +167,7 @@ def main():
 
     migration_parser = subparsers.add_parser("migrate", help="Migrates systems to a new Service Pack.")
     migration_parser.add_argument("filename", help="Filename of systems and their schedules for migration.")
-    migration_parser.add_argument("-s", "--save-action-ids-file",
+    migration_parser.add_argument("-f", "--save-action-ids-file",
                                   help="File name to save action IDs of scheduled jobs.")
     migration_parser.set_defaults(func=perform_product_migration)
 
