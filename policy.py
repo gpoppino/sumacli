@@ -7,7 +7,8 @@ from susepatching import AdvisoryType
 def get_advisory_types_for_system(client, system_id, policy):
     for product in client.system.getInstalledProducts(system_id):
         if product['isBaseProduct']:
-            return policy[product['friendlyName']]
+            if product['friendlyName'] in policy:
+                return policy[product['friendlyName']]
     return []
 
 
