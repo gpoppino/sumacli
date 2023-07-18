@@ -22,7 +22,7 @@ class PatchingSchedulerFactory(SchedulerFactory):
         if args.policy:
             policy_parser = ProductPatchingPolicyParser(args.policy)
             policy = policy_parser.parse()
-            advisory_types = get_advisory_types_for_system(client, system.get_id(client), policy)
+            advisory_types = get_advisory_types_for_system(client, system, policy)
         else:
             if args.security:
                 advisory_types.append(AdvisoryType.SECURITY)

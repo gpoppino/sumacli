@@ -1,14 +1,18 @@
 import csv
+import logging
 from pprint import pprint
 
 from susepatching import AdvisoryType
 
 
-def get_advisory_types_for_system(client, system_id, policy):
-    for product in client.system.getInstalledProducts(system_id):
+def get_advisory_types_for_system(client, system, policy):
+    logger = logging.getLogger(__name__)
+    for product in client.system.getInstalledProducts(system.get_id(client)):
         if product['isBaseProduct']:
             if product['friendlyName'] in policy:
                 return policy[product['friendlyName']]
+            else:
+                logger.warning(f"Product '{product['friendlyName']}' not found in policy file for system {system.name}")
     return []
 
 
