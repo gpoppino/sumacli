@@ -152,7 +152,7 @@ def main():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(required=True, dest="cmd")
 
-    patching_parser = subparsers.add_parser("patch", help="Patches or migrates systems.")
+    patching_parser = subparsers.add_parser("patch", help="Patches systems.")
     patching_parser.add_argument("filename",
                                  help="Filename of systems and their schedules for patching.")
     patching_parser.add_argument("-p", "--policy", help="Products patching policy filename.")
