@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta
+
+from policy import ProductPatchingPolicyParser, get_advisory_types_for_system
 from susepatching import AdvisoryType
 import logging.config
 import susepatching
@@ -17,14 +19,19 @@ class SchedulerFactory:
 class PatchingSchedulerFactory(SchedulerFactory):
     def get_scheduler(self, client, system, schedule_date, args):
         advisory_types = []
-        if args.security:
-            advisory_types.append(AdvisoryType.SECURITY)
-        if args.bugfix:
-            advisory_types.append(AdvisoryType.BUGFIX)
-        if args.enhancement:
-            advisory_types.append(AdvisoryType.PRODUCT_ENHANCEMENT)
-        if args.all_patches:
-            advisory_types = [AdvisoryType.ALL]
+        if args.policy:
+            policy_parser = ProductPatchingPolicyParser(args.policy)
+            policy = policy_parser.parse()
+            advisory_types = get_advisory_types_for_system(client, system.get_id(client), policy)
+        else:
+            if args.security:
+                advisory_types.append(AdvisoryType.SECURITY)
+            if args.bugfix:
+                advisory_types.append(AdvisoryType.BUGFIX)
+            if args.enhancement:
+                advisory_types.append(AdvisoryType.PRODUCT_ENHANCEMENT)
+            if args.all_patches:
+                advisory_types = [AdvisoryType.ALL]
 
         scheduler = susepatching.SystemPatchingScheduler(client, system, schedule_date, advisory_types, args.reboot,
                                                          args.no_reboot, "patching")
@@ -147,13 +154,14 @@ def main():
     patching_parser = subparsers.add_parser("patch", help="Patches or migrates systems.")
     patching_parser.add_argument("filename",
                                  help="Filename of systems and their schedules for patching.")
+    patching_parser.add_argument("-p", "--policy", help="Products patching policy filename.")
     patching_parser.add_argument(
         "-a", "--all-patches", help="Apply all available patches to each system.", action="store_true")
-    patching_parser.add_argument('-b', "--bugfix", help="Apply bug fix patches to each system.",
+    patching_parser.add_argument("-b", "--bugfix", help="Apply bug fix patches to each system.",
                                  action="store_true")
-    patching_parser.add_argument('-e', "--enhancement", help="Apply product enhancement patches to each system.",
+    patching_parser.add_argument("-e", "--enhancement", help="Apply product enhancement patches to each system.",
                                  action="store_true")
-    patching_parser.add_argument('-s', "--security", help="Apply security patches to each system.",
+    patching_parser.add_argument("-s", "--security", help="Apply security patches to each system.",
                                  action="store_true")
     patching_parser.add_argument("-f", "--save-action-ids-file", help="File name to save action IDs of scheduled jobs.")
     group = patching_parser.add_mutually_exclusive_group()
