@@ -147,6 +147,7 @@ def perform_validation(args):
 
 def main():
     logging.config.fileConfig('logging.conf')
+    logger = logging.getLogger(__name__)
 
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(required=True, dest="cmd")
@@ -184,6 +185,12 @@ def main():
     validator_parser.set_defaults(func=perform_validation)
 
     args = parser.parse_args()
+    if args.cmd == 'patch':
+        if args.policy is None and args.all_patches is False and args.bugfix is False and \
+                args.enhancement is False and args.security is False:
+            patching_parser.print_usage()
+            logger.error("The 'patch' subcommand needs at least one patching option")
+            sys.exit(1)
     args.func(args)
 
 
