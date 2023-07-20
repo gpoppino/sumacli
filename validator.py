@@ -55,7 +55,7 @@ class ActionIDValidator:
         found = False
         systems = self.__list_systems(self.__client.schedule.listCompletedSystems)
         if systems:
-            self.__logger.info(f"The following systems has completed successfully: {systems}")
+            self.__logger.info(f"The following systems have completed successfully: {systems}")
             found = True
 
         systems = self.__list_systems(self.__client.schedule.listFailedSystems)
