@@ -16,7 +16,7 @@ class TestSystemErrataInspector(unittest.TestCase):
         client.errata.listKeywords.return_value = ['testing', 'having fun', 'reboot_suggested', "nothing"]
         client.system.getId.return_value = [{'id': '100100001'}]
 
-        system_errata_inspector = SystemErrataInspector(client, self.system, AdvisoryType.ALL)
+        system_errata_inspector = SystemErrataInspector(client, self.system, [AdvisoryType.ALL])
 
         self.assertTrue(system_errata_inspector.has_suggested_reboot())
 
@@ -26,6 +26,6 @@ class TestSystemErrataInspector(unittest.TestCase):
         client.errata.listKeywords.return_value = ['testing', 'having fun', "nothing", 'restart_suggested']
         client.system.getId.return_value = [{'id': '100100001'}]
 
-        system_errata_inspector = SystemErrataInspector(client, self.system, AdvisoryType.ALL)
+        system_errata_inspector = SystemErrataInspector(client, self.system, [AdvisoryType.ALL])
 
         self.assertFalse(system_errata_inspector.has_suggested_reboot())
