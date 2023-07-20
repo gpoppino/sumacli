@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+import utils
 from policy import ProductPatchingPolicyParser, get_advisory_types_for_system
 from susepatching import AdvisoryType
 import logging.config
@@ -46,6 +47,15 @@ class ProductMigrationSchedulerFactory(SchedulerFactory):
         return scheduler
 
 
+class UtilsSchedulerFactory(SchedulerFactory):
+
+    def get_scheduler(self, client, system, schedule_date, args):
+        if args.package_refresh is None:
+            raise ValueError("No option specified")
+        scheduler = utils.SystemPackageRefreshScheduler(client, system, schedule_date)
+        return scheduler
+
+
 def perform_scheduling(scheduler, system, date):
     logger = logging.getLogger(__name__)
     action_ids = scheduler.schedule()
@@ -56,6 +66,8 @@ def perform_scheduling(scheduler, system, date):
             advisory_types_description = [t.value + " " for t in scheduler.get_advisory_types()]
             logger.info(f"System {system.name} scheduled successfully for "
                         f"{advisory_types_description} patching at {date}")
+        elif isinstance(scheduler, utils.SystemPackageRefreshScheduler):
+            logger.info(f"System {system.name} scheduled successfully for a package refresh at {date}")
     else:
         if isinstance(scheduler, susepatching.SystemProductMigrationScheduler):
             logger.error(f"System {system.name} failed to be scheduled for product migration at {date}")
@@ -63,6 +75,8 @@ def perform_scheduling(scheduler, system, date):
             advisory_types_description = [t.value + " " for t in scheduler.get_advisory_types()]
             logger.error(f"System {system.name} failed to be scheduled for "
                          f"{advisory_types_description} patching at {date}")
+        elif isinstance(scheduler, utils.SystemPackageRefreshScheduler):
+            logger.error(f"System {system.name} failed to be scheduled for a package refresh at {date}")
     return action_ids
 
 
@@ -145,6 +159,11 @@ def perform_validation(args):
     client.logout()
 
 
+def perform_utils_tasks(args):
+    factory = UtilsSchedulerFactory()
+    perform_suma_scheduling(factory, args)
+
+
 def main():
     logging.config.fileConfig('logging.conf')
     logger = logging.getLogger(__name__)
@@ -183,6 +202,13 @@ def main():
     validator_parser = subparsers.add_parser("validate", help="Validates results from actions file.")
     validator_parser.add_argument("action_ids_filename", help="Validate results of actions specified in file.")
     validator_parser.set_defaults(func=perform_validation)
+
+    utils_parser = subparsers.add_parser("utils", help="Some utility commands to run on systems.")
+    utils_parser.add_argument("filename", help="Filename of systems and their schedules for utility commands.")
+    utils_parser.add_argument("-r", "--package-refresh", help="Schedules a package list refresh for a system.",
+                              action="store_true", required=True)
+    utils_parser.add_argument("-f", "--save-action-ids-file", help="File name to save action IDs of scheduled jobs.")
+    utils_parser.set_defaults(func=perform_utils_tasks)
 
     args = parser.parse_args()
     if args.cmd == 'patch':
