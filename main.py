@@ -32,7 +32,7 @@ class PatchingSchedulerFactory(SchedulerFactory):
                 advisory_types = [AdvisoryType.ALL]
 
         scheduler = patching.SystemPatchingScheduler(client, system, schedule_date, advisory_types, args.reboot,
-                                                         args.no_reboot, "patching")
+                                                     args.no_reboot, "patching")
         return scheduler
 
 
