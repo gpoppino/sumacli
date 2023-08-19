@@ -1,4 +1,4 @@
-config.ini
+conf/config.ini
 *.csv
 .vscode
 __pycache__

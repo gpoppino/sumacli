@@ -37,7 +37,7 @@ class _MultiCallMethod:
 
 class SumaClient:
 
-    def __init__(self, config_filename="config.ini"):
+    def __init__(self, config_filename="conf/config.ini"):
         config = configparser.ConfigParser()
         config.read(config_filename)
 

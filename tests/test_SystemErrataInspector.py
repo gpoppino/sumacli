@@ -1,8 +1,8 @@
 import unittest
 from unittest.mock import Mock
-from susepatching import AdvisoryType
-from susepatching import SystemErrataInspector
-from susepatching import System
+from suma.patching import AdvisoryType
+from suma.patching import SystemErrataInspector
+from suma.patching import System
 
 
 class TestSystemErrataInspector(unittest.TestCase):

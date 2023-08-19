@@ -1,11 +1,8 @@
 from datetime import datetime, timedelta
 
-import utils
-from policy import ProductPatchingPolicyParser, get_advisory_types_for_system
-from susepatching import AdvisoryType
+from suma import utils, validator, patching, policy
+from suma.patching import AdvisoryType
 import logging.config
-import susepatching
-import validator
 import logging
 import argparse
 import sys
@@ -21,9 +18,9 @@ class PatchingSchedulerFactory(SchedulerFactory):
     def get_scheduler(self, client, system, schedule_date, args):
         advisory_types = []
         if args.policy:
-            policy_parser = ProductPatchingPolicyParser(args.policy)
-            policy = policy_parser.parse()
-            advisory_types = get_advisory_types_for_system(client, system, policy)
+            policy_parser = policy.ProductPatchingPolicyParser(args.policy)
+            patching_policy = policy_parser.parse()
+            advisory_types = policy.get_advisory_types_for_system(client, system, patching_policy)
         else:
             if args.security:
                 advisory_types.append(AdvisoryType.SECURITY)
@@ -34,7 +31,7 @@ class PatchingSchedulerFactory(SchedulerFactory):
             if args.all_patches:
                 advisory_types = [AdvisoryType.ALL]
 
-        scheduler = susepatching.SystemPatchingScheduler(client, system, schedule_date, advisory_types, args.reboot,
+        scheduler = patching.SystemPatchingScheduler(client, system, schedule_date, advisory_types, args.reboot,
                                                          args.no_reboot, "patching")
         return scheduler
 
@@ -43,7 +40,7 @@ class ProductMigrationSchedulerFactory(SchedulerFactory):
     def get_scheduler(self, client, system, schedule_date, args):
         if system.migration_target is None:
             raise ValueError(f"System {system.name} has no migration target")
-        scheduler = susepatching.SystemProductMigrationScheduler(client, system, schedule_date)
+        scheduler = patching.SystemProductMigrationScheduler(client, system, schedule_date)
         return scheduler
 
 
@@ -60,18 +57,18 @@ def perform_scheduling(scheduler, system, date):
     logger = logging.getLogger(__name__)
     action_ids = scheduler.schedule()
     if action_ids is not None:
-        if isinstance(scheduler, susepatching.SystemProductMigrationScheduler):
+        if isinstance(scheduler, patching.SystemProductMigrationScheduler):
             logger.info(f"System {system.name} scheduled successfully for product migration at {date}")
-        elif isinstance(scheduler, susepatching.SystemPatchingScheduler):
+        elif isinstance(scheduler, patching.SystemPatchingScheduler):
             advisory_types_description = [t.value + " " for t in scheduler.get_advisory_types()]
             logger.info(f"System {system.name} scheduled successfully for "
                         f"{advisory_types_description} patching at {date}")
         elif isinstance(scheduler, utils.SystemPackageRefreshScheduler):
             logger.info(f"System {system.name} scheduled successfully for a package refresh at {date}")
     else:
-        if isinstance(scheduler, susepatching.SystemProductMigrationScheduler):
+        if isinstance(scheduler, patching.SystemProductMigrationScheduler):
             logger.error(f"System {system.name} failed to be scheduled for product migration at {date}")
-        elif isinstance(scheduler, susepatching.SystemPatchingScheduler):
+        elif isinstance(scheduler, patching.SystemPatchingScheduler):
             advisory_types_description = [t.value + " " for t in scheduler.get_advisory_types()]
             logger.error(f"System {system.name} failed to be scheduled for "
                          f"{advisory_types_description} patching at {date}")
@@ -90,9 +87,9 @@ def perform_scheduling(scheduler, system, date):
 def perform_suma_scheduling(factory, args):
     logger = logging.getLogger(__name__)
 
-    client = susepatching.SumaClient()
+    client = patching.SumaClient()
     client.login()
-    systems = susepatching.SystemListParser(client, args.filename).parse()
+    systems = patching.SystemListParser(client, args.filename).parse()
     if systems == {}:
         logger.error("No systems found in file: " + args.filename)
         logger.error("The format of the file is: systemName,year-month-day hour:minute:second")
@@ -150,7 +147,7 @@ def perform_product_migration(args):
 def perform_validation(args):
     action_id_file_manager = validator.ActionIDFileManager(args.action_ids_filename)
 
-    client = susepatching.SumaClient()
+    client = patching.SumaClient()
     client.login()
 
     action_id_validator = validator.ActionIDValidator(client, action_id_file_manager)
@@ -165,7 +162,7 @@ def perform_utils_tasks(args):
 
 
 def main():
-    logging.config.fileConfig('logging.conf')
+    logging.config.fileConfig('conf/logging.conf')
     logger = logging.getLogger(__name__)
 
     parser = argparse.ArgumentParser()

@@ -1,8 +1,7 @@
 import csv
 import logging
 from pprint import pprint
-
-from susepatching import AdvisoryType
+from .patching import AdvisoryType
 
 
 def get_advisory_types_for_system(client, system, policy):
@@ -44,6 +43,6 @@ class ProductPatchingPolicyParser:
 
 
 if __name__ == "__main__":
-    parser = ProductPatchingPolicyParser("product_patching_policy.conf")
+    parser = ProductPatchingPolicyParser("../conf/product_patching_policy.conf")
     patching_policy = parser.parse()
     pprint(patching_policy)
