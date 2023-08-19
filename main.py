@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from suma import utils, validator, patching, policy
+from suma import utils, validator, patching, policy, client as suma_xmlrpc_client
 from suma.patching import AdvisoryType
 import logging.config
 import logging
@@ -87,7 +87,7 @@ def perform_scheduling(scheduler, system, date):
 def perform_suma_scheduling(factory, args):
     logger = logging.getLogger(__name__)
 
-    client = patching.SumaClient()
+    client = suma_xmlrpc_client.SumaClient()
     client.login()
     systems = patching.SystemListParser(client, args.filename).parse()
     if systems == {}:
@@ -147,7 +147,7 @@ def perform_product_migration(args):
 def perform_validation(args):
     action_id_file_manager = validator.ActionIDFileManager(args.action_ids_filename)
 
-    client = patching.SumaClient()
+    client = suma_xmlrpc_client.SumaClient()
     client.login()
 
     action_id_validator = validator.ActionIDValidator(client, action_id_file_manager)
