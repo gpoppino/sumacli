@@ -1,11 +1,11 @@
 from datetime import datetime, timedelta
-
 from suma import utils, validator, patching, policy, client as suma_xmlrpc_client
 from suma.patching import AdvisoryType
 import logging.config
 import logging
 import argparse
 import sys
+import os
 
 
 class SchedulerFactory:
@@ -162,6 +162,8 @@ def perform_utils_tasks(args):
 
 
 def main():
+    if not os.path.exists("logs/"):
+        os.makedirs("logs/")
     logging.config.fileConfig('conf/logging.conf')
     logger = logging.getLogger(__name__)
 
