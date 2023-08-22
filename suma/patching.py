@@ -58,7 +58,7 @@ class SystemPatchingScheduler(Scheduler):
             self.__logger.error("Failed to create action chain for system: " + self.__system.name)
             self.__logger.error("Fault code: %d" % err.faultCode)
             self.__logger.error("Fault string: %s" % err.faultString)
-            return -1
+            return None
 
         if self.__client.actionchain.scheduleChain(label, self.__date) == 1:
             return action_ids
