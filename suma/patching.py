@@ -36,7 +36,7 @@ class SystemPatchingScheduler(Scheduler):
 
     def schedule(self):
         if self.__system_has_in_progress_action(self.__system.name, self.__date):
-            self.__logger.error(f"System {self.__system.name} already has an action in progress at {str(self.__date)}")
+            self.__logger.error(f"System {self.__system.name} already has an action in progress!")
             return None
 
         try:
@@ -71,7 +71,7 @@ class SystemPatchingScheduler(Scheduler):
         in_progress_actions = self.__client.schedule.listInProgressActions()
         for action in in_progress_actions:
             converted = datetime.strptime(action['earliest'].value, "%Y%m%dT%H:%M:%S").isoformat()
-            if schedule_date.isoformat() == converted:
+            if schedule_date.isoformat() >= converted:
                 for s in self.__client.schedule.listInProgressSystems(action['id']):
                     if s['server_name'] == system:
                         return True
