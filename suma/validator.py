@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 import xmlrpc.client
 from datetime import datetime
@@ -10,7 +11,11 @@ class ActionIDFileManager:
         self.__logger = logging.getLogger(__name__)
         self.__action_id_filename = action_id_filename
         if action_id_filename is None:
-            self.__action_id_filename = "action_ids." + datetime.fromtimestamp(time.time()).isoformat()
+            actions_directory = "actions/"
+            if not os.path.exists(actions_directory):
+                os.makedirs(actions_directory)
+            self.__action_id_filename = (actions_directory +
+                                         "action_ids." + datetime.fromtimestamp(time.time()).isoformat())
 
     def read(self):
         with open(self.__action_id_filename) as f:
