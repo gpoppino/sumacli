@@ -1,8 +1,10 @@
 import logging
 from xmlrpc.client import Fault
 
+from suma.scheduler import SchedulerFactory, Scheduler
 
-class SystemPackageRefreshScheduler:
+
+class SystemPackageRefreshScheduler(Scheduler):
 
     def __init__(self, client, system, date):
         self.__client = client
@@ -21,3 +23,12 @@ class SystemPackageRefreshScheduler:
             self.__logger.error("Fault string: %s" % err.faultString)
             return None
         return action_ids
+
+
+class UtilsSchedulerFactory(SchedulerFactory):
+
+    def get_scheduler(self, client, system, schedule_date, args):
+        if args.package_refresh is None:
+            raise ValueError("No option specified")
+        scheduler = SystemPackageRefreshScheduler(client, system, schedule_date)
+        return scheduler

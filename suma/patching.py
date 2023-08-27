@@ -1,10 +1,12 @@
 #!/usr/bin/python3
-
+import csv
 from xmlrpc.client import Fault
 from datetime import datetime
 from enum import Enum
 import logging.config
 import logging
+
+from suma.scheduler import SchedulerFactory, Scheduler
 
 
 class AdvisoryType(Enum):
@@ -14,11 +16,6 @@ class AdvisoryType(Enum):
     # This is not a SUMA advisory type, but a flag to mark that we will patch the system
     # with all patches available for it
     ALL = 'All Relevant Errata'
-
-
-class Scheduler:
-    def schedule(self):
-        pass
 
 
 class SystemPatchingScheduler(Scheduler):
@@ -129,28 +126,6 @@ class SystemErrataInspector:
         return self.__errata
 
 
-class SystemProductMigrationScheduler(Scheduler):
-    def __init__(self, client, system, date):
-        self.__client = client
-        self.__system = system
-        self.__date = date
-        self.__logger = logging.getLogger(__name__)
-
-    def schedule(self):
-        action_ids = []
-        try:
-            action_ids.append(self.__client.system.scheduleProductMigration(self.__system.get_id(self.__client),
-                                                                            self.__system.migration_target, [], False,
-                                                                            self.__date))
-            self.__logger.debug(f"Successfully scheduled product migration with action ID {action_ids}")
-        except Fault as err:
-            self.__logger.error(f"Failed to schedule product migration for system {self.__system.name}")
-            self.__logger.error("Fault code: %d" % err.faultCode)
-            self.__logger.error("Fault string: %s" % err.faultString)
-            return None
-        return action_ids
-
-
 class System:
     def __init__(self, name, migration_target=None):
         self.__name = name
@@ -222,3 +197,63 @@ class SystemListParser:
         else:
             self.__systems[d].append(System(s, target))
         return True
+
+
+class PatchingSchedulerFactory(SchedulerFactory):
+    def get_scheduler(self, client, system, schedule_date, args):
+        advisory_types = []
+        if args.policy:
+            policy_parser = ProductPatchingPolicyParser(args.policy)
+            patching_policy = policy_parser.parse()
+            advisory_types = get_advisory_types_for_system(client, system, patching_policy)
+        else:
+            if args.security:
+                advisory_types.append(AdvisoryType.SECURITY)
+            if args.bugfix:
+                advisory_types.append(AdvisoryType.BUGFIX)
+            if args.enhancement:
+                advisory_types.append(AdvisoryType.PRODUCT_ENHANCEMENT)
+            if args.all_patches:
+                advisory_types = [AdvisoryType.ALL]
+
+        scheduler = SystemPatchingScheduler(client, system, schedule_date, advisory_types, args.reboot,
+                                            args.no_reboot, "patching")
+        return scheduler
+
+
+def get_advisory_types_for_system(client, system, policy):
+    logger = logging.getLogger(__name__)
+    for product in client.system.getInstalledProducts(system.get_id(client)):
+        if product['isBaseProduct']:
+            if product['friendlyName'] in policy:
+                return policy[product['friendlyName']]
+            else:
+                logger.warning(f"Product '{product['friendlyName']}' not found in policy file for system {system.name}")
+    return []
+
+
+class ProductPatchingPolicyParser:
+
+    def __init__(self, filename):
+        self.__filename = filename
+
+    def parse(self):
+        policy = {}
+        with open(self.__filename, mode="r") as file:
+            csv_file = csv.reader(file)
+            for product in csv_file:
+                policy[product[0]] = []
+                advisory_types = product[1].split()
+                for advisory in advisory_types:
+                    if advisory.lower() == 'all':
+                        policy[product[0]].append(AdvisoryType.ALL)
+                        break
+                    if advisory.lower() == 'security':
+                        policy[product[0]].append(AdvisoryType.SECURITY)
+                        continue
+                    if advisory.lower() == 'bugfix':
+                        policy[product[0]].append(AdvisoryType.BUGFIX)
+                        continue
+                    if advisory.lower() == 'product_enhancement':
+                        policy[product[0]].append(AdvisoryType.PRODUCT_ENHANCEMENT)
+        return policy

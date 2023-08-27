@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta
-from suma import utils, validator, patching, policy, client as suma_xmlrpc_client
-from suma.patching import AdvisoryType
+from suma import utils, validator, patching, migration, client as suma_xmlrpc_client
 import logging.config
 import logging
 import argparse
@@ -8,56 +7,11 @@ import sys
 import os
 
 
-class SchedulerFactory:
-
-    def get_scheduler(self, client, system, schedule_date, args):
-        pass
-
-
-class PatchingSchedulerFactory(SchedulerFactory):
-    def get_scheduler(self, client, system, schedule_date, args):
-        advisory_types = []
-        if args.policy:
-            policy_parser = policy.ProductPatchingPolicyParser(args.policy)
-            patching_policy = policy_parser.parse()
-            advisory_types = policy.get_advisory_types_for_system(client, system, patching_policy)
-        else:
-            if args.security:
-                advisory_types.append(AdvisoryType.SECURITY)
-            if args.bugfix:
-                advisory_types.append(AdvisoryType.BUGFIX)
-            if args.enhancement:
-                advisory_types.append(AdvisoryType.PRODUCT_ENHANCEMENT)
-            if args.all_patches:
-                advisory_types = [AdvisoryType.ALL]
-
-        scheduler = patching.SystemPatchingScheduler(client, system, schedule_date, advisory_types, args.reboot,
-                                                     args.no_reboot, "patching")
-        return scheduler
-
-
-class ProductMigrationSchedulerFactory(SchedulerFactory):
-    def get_scheduler(self, client, system, schedule_date, args):
-        if system.migration_target is None:
-            raise ValueError(f"System {system.name} has no migration target")
-        scheduler = patching.SystemProductMigrationScheduler(client, system, schedule_date)
-        return scheduler
-
-
-class UtilsSchedulerFactory(SchedulerFactory):
-
-    def get_scheduler(self, client, system, schedule_date, args):
-        if args.package_refresh is None:
-            raise ValueError("No option specified")
-        scheduler = utils.SystemPackageRefreshScheduler(client, system, schedule_date)
-        return scheduler
-
-
 def perform_scheduling(scheduler, system, date):
     logger = logging.getLogger(__name__)
     action_ids = scheduler.schedule()
     if action_ids is not None:
-        if isinstance(scheduler, patching.SystemProductMigrationScheduler):
+        if isinstance(scheduler, migration.SystemProductMigrationScheduler):
             logger.info(f"System {system.name} scheduled successfully for product migration at {date}")
         elif isinstance(scheduler, patching.SystemPatchingScheduler):
             advisory_types_description = [t.value + " " for t in scheduler.get_advisory_types()]
@@ -66,7 +20,7 @@ def perform_scheduling(scheduler, system, date):
         elif isinstance(scheduler, utils.SystemPackageRefreshScheduler):
             logger.info(f"System {system.name} scheduled successfully for a package refresh at {date}")
     else:
-        if isinstance(scheduler, patching.SystemProductMigrationScheduler):
+        if isinstance(scheduler, migration.SystemProductMigrationScheduler):
             logger.error(f"System {system.name} failed to be scheduled for product migration at {date}")
         elif isinstance(scheduler, patching.SystemPatchingScheduler):
             advisory_types_description = [t.value + " " for t in scheduler.get_advisory_types()]
@@ -135,12 +89,12 @@ def perform_suma_scheduling(factory, args):
 
 
 def perform_patching(args):
-    factory = PatchingSchedulerFactory()
+    factory = patching.PatchingSchedulerFactory()
     perform_suma_scheduling(factory, args)
 
 
 def perform_product_migration(args):
-    factory = ProductMigrationSchedulerFactory()
+    factory = migration.ProductMigrationSchedulerFactory()
     perform_suma_scheduling(factory, args)
 
 
@@ -157,7 +111,7 @@ def perform_validation(args):
 
 
 def perform_utils_tasks(args):
-    factory = UtilsSchedulerFactory()
+    factory = utils.UtilsSchedulerFactory()
     perform_suma_scheduling(factory, args)
 
 
