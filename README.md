@@ -1,7 +1,7 @@
 # Summary
 This script schedules the patching of SUMA client systems with action chains or a product migration to a
-higher service pack level. An action chain for a client system includes the patching with only security patches by
-default and then a reboot, everything at a specified date and time.
+higher service pack level. An action chain for a client system includes the patching with the type of patches that are
+requested by the user and then a reboot if it is suggested by a patch, everything at a specified date and time.
 
 If the patching fails for a system, the reboot is not run by the action chain.
 
@@ -44,7 +44,22 @@ group:sles15-sp4-systems,now,sle-product-sles15-sp5-pool-x86_64
 
 This associates each system with a patching date and time when the patching will be scheduled. If the system has no
 pending patches, it will be skipped and no action chain will be created for it. In case there is a third argument
-with a product target label, a product migration will be scheduled for the system.
+with a product target label and the `migrate` option is specified, a product migration will be scheduled for the system.
+
+### Patching Policy
+
+The `patch` command has an option called `-p` and `--policy` to indicate a CSV file with the following structure:
+
+```txt
+BaseProductName,PatchAdvisoryType1 PatchAdvisoryType2 PatchAdvisoryType3
+```
+
+When specified it will patch each system that has _BaseProductName_ as their base product with the patch advisory types
+(_security_, _bugfix_, _product_enhancement_ and _all_) that follow after the comma separatd by spaces.
+
+There is an example of patching policies located at `conf/product_patching_policy.conf`. Note: this file does not have
+the full list of available products. The user of the script will have to add the desired base products and their
+patching policies as needed.
 
 ## Configuration
 
@@ -66,17 +81,37 @@ Options:
 
 ## How to run the script
 
-On the command line, you may run:
+On the command line, you may run the following command to apply all the available patches to each system
+in `systems.csv`:
 
-`$ python3 main.py patch systems.csv`
+`$ python3 main.py patch --all-patches systems.csv`
 
-or
+Or to patch the systems by the policies part of `conf/product_patching_policy.conf` and add a reboot to each
+action chain:
+
+`$ python3 main.py patch --policy conf/product_patching_policy.conf --reboot systems.csv`
+
+Or to migrate the systems to a new Service Pack (SP) level:
 
 `$ python3 main.py migrate systems.csv`
+
+Or to request a package refresh for each system:
+
+`$ python3 main.py utils -r systems.csv`
 
 The _systems.csv_ file has to be structured as described in the _Input_ section.
 
 To validate results, you may run:
 
-`$ python3 main.py validate action_ids_file`
+`$ python3 main.py validate actions/action_ids_file`
 
+## Help
+
+You may add the `-h` or `--help` option after each command to list all their available options with a short description.
+For example:
+
+`$ python3 main.py -h`
+
+Or
+
+`$ python3 main.py patch --help`
