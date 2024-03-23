@@ -15,7 +15,7 @@ class SystemProductMigrationScheduler(Scheduler):
         action_ids = []
         try:
             action_ids.append(self.__client.system.scheduleProductMigration(self.__system.get_id(self.__client),
-                                                                            self.__system.migration_target, [], False,
+                                                                            self.__system.target, [], False,
                                                                             self.__date))
             self.__logger.debug(f"Successfully scheduled product migration with action ID {action_ids}")
         except Fault as err:
@@ -28,7 +28,7 @@ class SystemProductMigrationScheduler(Scheduler):
 
 class ProductMigrationSchedulerFactory(SchedulerFactory):
     def get_scheduler(self, client, system, schedule_date, args):
-        if system.migration_target is None:
+        if system.target is None:
             raise ValueError(f"System {system.name} has no migration target")
         scheduler = SystemProductMigrationScheduler(client, system, schedule_date)
         return scheduler

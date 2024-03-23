@@ -32,17 +32,22 @@ class SystemErrataInspector:
 
 
 class System:
-    def __init__(self, name, migration_target=None):
+    def __init__(self, name, target=None, kopts=None):
         self.__name = name
-        self.__migration_target = migration_target
+        self.__target = target
+        self.__kopts = kopts
 
     @property
     def name(self):
         return self.__name
 
     @property
-    def migration_target(self):
-        return self.__migration_target
+    def target(self):
+        return self.__target
+
+    @property
+    def kopts(self):
+        return self.__kopts
 
     def get_id(self, client):
         system_id = client.system.getId(self.__name)
@@ -93,12 +98,15 @@ class SystemListParser:
         target = None
         if len(data) == 3:
             target = data[2]
+        kopts = None
+        if len(data) == 4:
+            kopts = data[3]
         if d not in self.__systems.keys():
             self.__systems[d] = []
         if ":" in s:
             group = s.split(':')[1]
             systems = self._get_systems_from_group(group)
-            [self.__systems[d].append(System(s.get('profile_name'), target)) for s in systems]
+            [self.__systems[d].append(System(s.get('profile_name'), target, kopts)) for s in systems]
         else:
-            self.__systems[d].append(System(s, target))
+            self.__systems[d].append(System(s, target, kopts))
         return True

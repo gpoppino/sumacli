@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from suma import utils, validator, client_systems, patching, migration, client as suma_xmlrpc_client
+from suma import utils, validator, client_systems, patching, migration, upgrade, client as suma_xmlrpc_client
 import logging.config
 import logging
 import argparse
@@ -19,6 +19,8 @@ def perform_scheduling(scheduler, system, date):
                         f"{advisory_types_description} patching at {date}")
         elif isinstance(scheduler, utils.SystemPackageRefreshScheduler):
             logger.info(f"System {system.name} scheduled successfully for a package refresh at {date}")
+        elif isinstance(scheduler, upgrade.SystemUpgradeScheduler):
+            logger.info(f"System {system.name} scheduled successfully for upgrade at {date}")
     else:
         if isinstance(scheduler, migration.SystemProductMigrationScheduler):
             logger.error(f"System {system.name} failed to be scheduled for product migration at {date}")
@@ -28,6 +30,8 @@ def perform_scheduling(scheduler, system, date):
                          f"{advisory_types_description} patching at {date}")
         elif isinstance(scheduler, utils.SystemPackageRefreshScheduler):
             logger.error(f"System {system.name} failed to be scheduled for a package refresh at {date}")
+        elif isinstance(scheduler, upgrade.SystemUpgradeScheduler):
+            logger.error(f"System {system.name} failed to be scheduled for upgrade at {date}")
     return action_ids
 
 
@@ -98,6 +102,11 @@ def perform_product_migration(args):
     perform_suma_scheduling(factory, args)
 
 
+def perform_system_upgrade(args):
+    factory = upgrade.SystemUpgradeSchedulerFactory()
+    perform_suma_scheduling(factory, args)
+
+
 def perform_validation(args):
     action_id_file_manager = validator.ActionIDFileManager(args.action_ids_filename)
 
@@ -151,6 +160,11 @@ def main():
     migration_parser.add_argument("-f", "--save-action-ids-file",
                                   help="File name to save action IDs of scheduled jobs.")
     migration_parser.set_defaults(func=perform_product_migration)
+
+    upgrade_parser = subparsers.add_parser("upgrade", help="Upgrades systems to a new product version.")
+    upgrade_parser.add_argument("filename", help="Filename of systems and their schedules for upgrade.")
+    upgrade_parser.add_argument("-f", "--save-action-ids-file", help="File name to save action IDs of scheduled jobs.")
+    upgrade_parser.set_defaults(func=perform_system_upgrade)
 
     validator_parser = subparsers.add_parser("validate", help="Validates results from actions file.")
     validator_parser.add_argument("action_ids_filename", help="Validate results of actions specified in file.")

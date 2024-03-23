@@ -25,7 +25,8 @@ class SumaClient:
         config = configparser.ConfigParser()
         config.read(config_filename)
 
-        self.__MANAGER_URL = config['server']['api_url']
+        self.__MANAGER_API_URL = config['server']['api_url']
+        self.__MANAGER_FQDN = config['server']['fqdn']
         self.__MANAGER_LOGIN = config['credentials']['username']
         self.__MANAGER_PASSWORD = config['credentials']['password']
         self.__key = None
@@ -40,7 +41,7 @@ class SumaClient:
         context = ssl.create_default_context()
         context.check_hostname = False
         context.verify_mode = ssl.CERT_NONE
-        self.__client = ServerProxy(self.__MANAGER_URL, context=context)
+        self.__client = ServerProxy(self.__MANAGER_API_URL, context=context)
         self.__key = self.__client.auth.login(
             self.__MANAGER_LOGIN, self.__MANAGER_PASSWORD)
 
@@ -59,3 +60,11 @@ class SumaClient:
 
     def get_instance(self):
         return self.__client
+
+    @property
+    def manager_login(self):
+        return self.__MANAGER_LOGIN
+
+    @property
+    def manager_fqdn(self):
+        return self.__MANAGER_FQDN
