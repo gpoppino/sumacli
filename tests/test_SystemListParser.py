@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import Mock
-from suma.patching import SystemListParser
+from suma.client_systems import SystemListParser
 
 
 class TestSystemListParser(unittest.TestCase):
