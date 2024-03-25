@@ -1,6 +1,9 @@
+import os
+import sys
 from xmlrpc.client import ServerProxy
 import configparser
 import ssl
+import logging
 
 
 class _MultiCallMethod:
@@ -21,7 +24,31 @@ class _MultiCallMethod:
 
 class SumaClient:
 
-    def __init__(self, config_filename="conf/config.ini"):
+    def __init__(self):
+        conf_dir = os.path.expanduser('~/.sumacli')
+        config_filename = os.path.join(conf_dir, 'config')
+
+        if not os.path.isfile(config_filename):
+            try:
+                # create ~/.sumacli
+                if not os.path.isdir(conf_dir):
+                    os.mkdir(conf_dir, int('0700', 8))
+
+                handle = open(config_filename, 'w')
+                handle.write('[server]\n')
+                handle.write('api_url = https://localhost/rpc/api\n')
+                handle.write('fqdn = localhost\n')
+                handle.write('\n')
+                handle.write('[credentials]\n')
+                handle.write('username = admin\n')
+                handle.write('password = admin\n')
+                handle.close()
+                logging.info(
+                    f'Created {config_filename} file. Please, edit it with your credentials and server information.')
+                sys.exit(1)
+            except IOError:
+                logging.error(f'Could not create {config_filename}')
+
         config = configparser.ConfigParser()
         config.read(config_filename)
 
