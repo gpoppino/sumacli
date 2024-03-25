@@ -4,11 +4,10 @@ import logging.config
 import logging
 import argparse
 import sys
-import os
 
 
 def perform_scheduling(scheduler, system, date):
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger("sumacli")
     action_ids = scheduler.schedule()
     if action_ids is not None:
         if isinstance(scheduler, migration.SystemProductMigrationScheduler):
@@ -43,7 +42,7 @@ def perform_scheduling(scheduler, system, date):
 # 66 total failure. all systems scheduling has failed due to improper input
 
 def perform_suma_scheduling(factory, args):
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger("sumacli")
 
     client = suma_xmlrpc_client.SumaClient()
     client.login()
@@ -125,10 +124,8 @@ def perform_utils_tasks(args):
 
 
 def main():
-    if not os.path.exists("logs/"):
-        os.makedirs("logs/")
     logging.config.fileConfig('conf/logging.conf')
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger("sumacli")
 
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(required=True, dest="cmd")
