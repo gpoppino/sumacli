@@ -90,13 +90,13 @@ class SystemListParser:
             data = line.split(',')
         except ValueError:
             return False
-        if len(data) == 1 or len(data) > 3:
+        if len(data) == 1 or len(data) > 4:
             # system specified but no date or invalid data
             return False
         s = data[0].strip()
         d = data[1].strip()
         target = None
-        if len(data) == 3:
+        if len(data) >= 3:
             target = data[2]
         kopts = None
         if len(data) == 4:
