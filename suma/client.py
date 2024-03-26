@@ -24,20 +24,23 @@ class _MultiCallMethod:
 
 class SumaClient:
 
-    def __init__(self):
+    def __init__(self, config_file=None):
         conf_dir = os.path.expanduser('~/.sumacli')
         config_filename = os.path.join(conf_dir, 'config')
 
+        if config_file is not None:
+            config_filename = config_file
+
         if not os.path.isfile(config_filename):
+            logging.error(f'Configuration file {config_filename} does not exist. Creating a new one.')
             try:
-                # create ~/.sumacli
-                if not os.path.isdir(conf_dir):
+                if not os.path.isdir(conf_dir) and config_file is None:
                     os.mkdir(conf_dir, int('0700', 8))
 
                 handle = open(config_filename, 'w')
                 handle.write('[server]\n')
                 handle.write('api_url = https://localhost/rpc/api\n')
-                handle.write('fqdn = localhost\n')
+                handle.write('fqdn = localhost.localdomain\n')
                 handle.write('\n')
                 handle.write('[credentials]\n')
                 handle.write('username = admin\n')

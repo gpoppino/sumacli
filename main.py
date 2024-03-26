@@ -44,7 +44,7 @@ def perform_scheduling(scheduler, system, date):
 def perform_suma_scheduling(factory, args):
     logger = logging.getLogger("sumacli")
 
-    client = suma_xmlrpc_client.SumaClient()
+    client = suma_xmlrpc_client.SumaClient(args.config)
     client.login()
     systems = client_systems.SystemListParser(client, args.filename).parse()
     if systems == {}:
@@ -128,6 +128,7 @@ def main():
     logger = logging.getLogger("sumacli")
 
     parser = argparse.ArgumentParser()
+    parser.add_argument("-c", "--config", help="Config filename.", required=False)
     subparsers = parser.add_subparsers(required=True, dest="cmd")
 
     patching_parser = subparsers.add_parser("patch", help="Patches systems.")
