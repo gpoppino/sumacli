@@ -86,3 +86,13 @@ class TestSystemListParser(unittest.TestCase):
         self.assertTrue(self.date3 in systems)
         self.assertEqual(self.system1, systems[self.date3][0].name)
         self.assertEqual(self.system2, systems[self.date3][1].name)
+
+    def test_systemListParserTargetArgument(self):
+        self.parser._add_system(f"{self.system1},{self.date1},target1")
+        systems = self.parser.get_systems()
+        self.assertEqual("target1", systems[self.date1][0].target)
+
+    def test_systemListParserKoptsArgument(self):
+        self.parser._add_system(f"{self.system1},{self.date1},target1,kopts1")
+        systems = self.parser.get_systems()
+        self.assertEqual("kopts1", systems[self.date1][0].kopts)
