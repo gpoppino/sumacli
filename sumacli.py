@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from suma import utils, validator, client_systems, patching, migration, upgrade, client as suma_xmlrpc_client
+from sumacli import utils, validator, client_systems, patching, migration, upgrade, client as suma_xmlrpc_client
 import logging.config
 import logging
 import argparse
@@ -50,7 +50,7 @@ def perform_suma_scheduling(factory, args):
     if systems == {}:
         logger.error("No systems found in file: " + args.filename)
         logger.error("The format of the file is: systemName,year-month-day hour:minute:second")
-        logger.error("Example: suma-client,2021-11-06 10:00:00")
+        logger.error("Example: sumacli-client,2021-11-06 10:00:00")
         client.logout()
         sys.exit(66)
 

@@ -1,8 +1,8 @@
 import unittest
 from unittest.mock import Mock
-from suma.client_systems import AdvisoryType
-from suma.client_systems import SystemErrataInspector
-from suma.client_systems import System
+from sumacli.client_systems import AdvisoryType
+from sumacli.client_systems import SystemErrataInspector
+from sumacli.client_systems import System
 
 
 class TestSystemErrataInspector(unittest.TestCase):

@@ -1,6 +1,6 @@
 import logging
 from xmlrpc.client import Fault
-from suma.advisory_type import AdvisoryType
+from sumacli.advisory_type import AdvisoryType
 
 
 class SystemErrataInspector:

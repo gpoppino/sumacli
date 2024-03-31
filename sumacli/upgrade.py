@@ -1,7 +1,7 @@
 import logging
 from xmlrpc.client import Fault
 
-from suma.scheduler import SchedulerFactory, Scheduler
+from sumacli.scheduler import SchedulerFactory, Scheduler
 
 
 class SystemUpgradeScheduler(Scheduler):
