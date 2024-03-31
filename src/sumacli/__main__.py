@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-
+import os.path
 from datetime import datetime, timedelta
 from sumacli import utils, validator, client_systems, patching, migration, upgrade, client as suma_xmlrpc_client
 import logging.config
@@ -126,7 +126,10 @@ def perform_utils_tasks(args):
 
 
 def main():
-    logging.config.fileConfig('conf/logging.conf')
+    logging_filename = "/etc/sumacli/logging.conf"
+    if not os.path.isfile(logging_filename):
+        logging_filename = "conf/logging.conf"
+    logging.config.fileConfig(logging_filename)
     logger = logging.getLogger("sumacli")
 
     parser = argparse.ArgumentParser()
