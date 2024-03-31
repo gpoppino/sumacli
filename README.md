@@ -1,7 +1,8 @@
 # Summary
-This script schedules the patching of SUMA client systems with action chains or a product migration to a
-higher service pack level. An action chain for a client system includes the patching with the type of patches that are
-requested by the user and then a reboot if it is suggested by a patch, everything at a specified date and time.
+This script schedules the patching of SUMA client systems with action chains, a product migration to a
+higher service pack level or performs an offline upgrades. An action chain for a client system includes the patching
+with the type of patches that are requested by the user and then a reboot if it is suggested by a patch,
+everything at a specified date and time.
 
 If the patching fails for a system, the reboot is not run by the action chain.
 
@@ -16,6 +17,7 @@ client-system-name2,YYYY-mm-dd HH:MM:SS,migration-target-label
 group:name-of-group2,YYYY-mm-dd HH:MM:SS,migration-target-label
 client-system-name3,now
 group:name-of-group3,now
+client-system-name4,YYYY-mm-dd HH:MM:SS,ks-label,kopts
 ```
 
 Where:
@@ -55,7 +57,7 @@ BaseProductName,PatchAdvisoryType1 PatchAdvisoryType2 PatchAdvisoryType3
 ```
 
 When specified it will patch each system that has _BaseProductName_ as their base product with the patch advisory types
-(_security_, _bugfix_, _product_enhancement_ and _all_) that follow after the comma separatd by spaces.
+(_security_, _bugfix_, _product_enhancement_ and _all_) that follow after the comma separated by spaces.
 
 There is an example of patching policies located at `conf/product_patching_policy.conf`. Note: this file does not have
 the full list of available products. The user of the script will have to add the desired base products and their
@@ -63,11 +65,12 @@ patching policies as needed.
 
 ## Configuration
 
-The script needs a separate configuration file named `config.ini` with the following format:
+The script needs a separate configuration file named `config` with the following format:
 
 ```ini
 [server]
-api_url = https://your-suma-server-name/rpc/api
+api_url = https://your-suma-server-name.localdomain/rpc/api
+fqdn = your-suma-server-name.localdomain
 
 [credentials]
 username = your-username
@@ -76,42 +79,56 @@ password = your-password
 
 Options:
 * `api_url`: contains the SUMA server FQDN and path to the API (which is `/rpc/api`) using the HTTPS protocol.
+* `fqdn`: contains the SUMA server FQDN.
 * `username`: contains a SUMA username with permissions to perform patching on the chosen client servers.
 * `password`: contains the password of the SUMA username.
 
 ## How to run the script
 
+Depending on how the script was installed, it can be run in different ways. If the script was installed using the RPM
+package, it can be run as follows:
+
+`$ sumacli patch systems.csv`
+
+However, if the script was installed using the source code, it can be run as follows:
+
+`$ python3 -m sumacli patch systems.csv`
+
+## Examples
+
+The following examples assume the script was installed using the RPM package.
+
 On the command line, you may run the following command to apply all the available patches to each system
 in `systems.csv`:
 
-`$ python3 main.py patch --all-patches systems.csv`
+`$ sumacli patch --all-patches systems.csv`
 
 Or to patch the systems by the policies part of `conf/product_patching_policy.conf` and add a reboot to each
 action chain:
 
-`$ python3 main.py patch --policy conf/product_patching_policy.conf --reboot systems.csv`
+`$ sumacli patch --policy conf/product_patching_policy.conf --reboot systems.csv`
 
 Or to migrate the systems to a new Service Pack (SP) level:
 
-`$ python3 main.py migrate systems.csv`
+`$ sumacli migrate systems.csv`
 
 Or to request a package refresh for each system:
 
-`$ python3 main.py utils -r systems.csv`
+`$ sumacli utils -r systems.csv`
 
 The _systems.csv_ file has to be structured as described in the _Input_ section.
 
 To validate results, you may run:
 
-`$ python3 main.py validate actions/action_ids_file`
+`$ sumacli validate actions/action_ids_file`
 
 ## Help
 
 You may add the `-h` or `--help` option after each command to list all their available options with a short description.
 For example:
 
-`$ python3 main.py -h`
+`$ sumacli -h`
 
 Or
 
-`$ python3 main.py patch --help`
+`$ sumacli patch --help`
