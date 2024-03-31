@@ -7,3 +7,6 @@ __pycache__
 action_ids.*
 *.sh
 venv/
+build/
+dist/
+*.egg-info/
