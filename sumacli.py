@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 from datetime import datetime, timedelta
 from sumacli import utils, validator, client_systems, patching, migration, upgrade, client as suma_xmlrpc_client
 import logging.config
