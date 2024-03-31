@@ -1,0 +1,18 @@
+[project]
+name = "sumacli"
+version = "1.0.0"
+authors = [
+  { name="Geronimo Poppino", email="gpoppino@outlook.com" },
+]
+description = "Schedules SUSE-Manager clients for patching, migration or upgrade from the CLI"
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GPL-3 License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/gpoppino/sumacli"
+Issues = "https://github.com/gpoppino/sumacli/issues"
