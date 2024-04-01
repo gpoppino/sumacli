@@ -16,3 +16,10 @@ classifiers = [
 [project.urls]
 Homepage = "https://github.com/gpoppino/sumacli"
 Issues = "https://github.com/gpoppino/sumacli/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+exclude = ["tests"]
+
+[tool.setuptools.package-data]
+sumacli = ["conf/logging.conf"]
