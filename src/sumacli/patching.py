@@ -78,6 +78,8 @@ class SystemPatchingScheduler(Scheduler):
                 if reboot_action_id > 0:
                     action_ids.append(reboot_action_id)
                     self.__logger.debug("Successfully added system reboot to action chain with label: " + label)
+            if self.__systemErrataInspector.has_restart_suggested():
+                self.__logger.warning("System " + self.__system.name + " has patches that require a restart!")
         return action_ids
 
     def __add_errata_to_action_chain(self, errata, label):

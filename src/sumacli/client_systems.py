@@ -18,6 +18,13 @@ class SystemErrataInspector:
                 return True
         return False
 
+    def has_restart_suggested(self):
+        for patch in self.obtain_system_errata():
+            keywords = self.__client.errata.listKeywords(patch['advisory_name'])
+            if 'restart_suggested' in keywords:
+                return True
+        return False
+
     def obtain_system_errata(self):
         if self.__errata:
             return self.__errata
