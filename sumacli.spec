@@ -19,7 +19,7 @@ Summary:        Schedules SUSE-Manager clients for patching, migration or upgrad
 License:        GPL-3.0-or-later
 Group:          Applications/System
 URL:            https://github.com/gpoppino/sumacli
-Source:         %{name}-%{version}.tar.gz
+Source:         https://github.com/gpoppino/sumacli/releases/download/v%{version}/%{name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 BuildArch:      noarch
 BuildRequires:  python311
@@ -44,7 +44,7 @@ Schedules SUSE-Manager clients for patching, migration or upgrade from the CLI
 %{__install} -p -m0755 src/sumacli/__main__.py %{buildroot}/%{_bindir}/sumacli
 
 %{__mkdir_p} %{buildroot}/%{_sysconfdir}/sumacli
-%{__install} -p -m0644 conf/logging.conf %{buildroot}/%{_sysconfdir}/sumacli/
+%{__install} -p -m0644 src/sumacli/conf/logging.conf %{buildroot}/%{_sysconfdir}/sumacli/
 
 %{__mkdir_p} %{buildroot}/%{python311_sitelib}/sumacli
 %{__install} -p -m0644 src/sumacli/*.py %{buildroot}/%{python311_sitelib}/sumacli/
