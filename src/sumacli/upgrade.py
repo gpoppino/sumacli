@@ -73,6 +73,9 @@ class SystemUpgradeScheduler(Scheduler):
             self.__logger.error("Fault code: %d" % err.faultCode)
             self.__logger.error("Fault string: %s" % err.faultString)
             return None
+        except ValueError as err:
+            self.__logger.error(err)
+            return None
         return action_ids
 
 
