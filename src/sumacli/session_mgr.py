@@ -42,11 +42,12 @@ class SessionManager:
 
     @session_key.deleter
     def session_key(self):
-        with open(self.__session_file, 'r') as in_session_file:
-            lines = in_session_file.readlines()
-            for line in lines:
-                if line.startswith(self.__config_manager.manager_login):
-                    lines.remove(line)
+        if os.path.isfile(self.__session_file):
+            with open(self.__session_file, 'r') as in_session_file:
+                lines = in_session_file.readlines()
+                for line in lines:
+                    if line.startswith(self.__config_manager.manager_login):
+                        lines.remove(line)
 
-            with open(self.__session_file, 'w') as out_session_file:
-                out_session_file.writelines(lines)
+                with open(self.__session_file, 'w') as out_session_file:
+                    out_session_file.writelines(lines)

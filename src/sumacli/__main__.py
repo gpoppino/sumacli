@@ -122,6 +122,15 @@ def perform_utils_tasks(args):
     perform_suma_scheduling(factory, args)
 
 
+def perform_user_tasks(args):
+    client = suma_xmlrpc_client.SumaClient(args.config)
+
+    if args.login:
+        client.login()
+    elif args.logout:
+        client.logout()
+
+
 def main():
     logging_file = "/etc/sumacli/logging.conf"
     if not os.path.isfile(logging_file):
@@ -176,6 +185,11 @@ def main():
                               action="store_true", required=True)
     utils_parser.add_argument("-f", "--save-action-ids-file", help="File name to save action IDs of scheduled jobs.")
     utils_parser.set_defaults(func=perform_utils_tasks)
+
+    user_parser = subparsers.add_parser("user", help="User management commands.")
+    user_parser.add_argument("-i", "--login", help="Logs in to the server.", action="store_true")
+    user_parser.add_argument("-o", "--logout", help="Logs out the user from the server.", action="store_true")
+    user_parser.set_defaults(func=perform_user_tasks)
 
     args = parser.parse_args()
     if args.cmd == 'patch':
