@@ -1,9 +1,11 @@
-import os
-import sys
-from xmlrpc.client import ServerProxy
-import configparser
-import ssl
+import getpass
 import logging
+import sys
+from xmlrpc.client import ServerProxy, Fault
+from sumacli.config_mgr import ConfigManager
+import ssl
+
+from sumacli.session_mgr import SessionManager
 
 
 class _MultiCallMethod:
@@ -25,76 +27,59 @@ class _MultiCallMethod:
 class SumaClient:
 
     def __init__(self, config_file=None):
-        conf_dir = os.path.expanduser('~/.sumacli')
-        config_filename = os.path.join(conf_dir, 'config')
-
-        if config_file is not None:
-            config_filename = config_file
-
-        if not os.path.isfile(config_filename):
-            logging.error(f'Configuration file {config_filename} does not exist. Creating a new one.')
-            try:
-                if not os.path.isdir(conf_dir) and config_file is None:
-                    os.mkdir(conf_dir, int('0700', 8))
-
-                handle = open(config_filename, 'w')
-                handle.write('[server]\n')
-                handle.write('api_url = https://localhost/rpc/api\n')
-                handle.write('fqdn = localhost.localdomain\n')
-                handle.write('\n')
-                handle.write('[credentials]\n')
-                handle.write('username = admin\n')
-                handle.write('password = admin\n')
-                handle.close()
-                logging.info(
-                    f'Created {config_filename} file. Please, edit it with your credentials and server information.')
-                sys.exit(1)
-            except IOError:
-                logging.error(f'Could not create {config_filename}')
-
-        config = configparser.ConfigParser()
-        config.read(config_filename)
-
-        self.__MANAGER_API_URL = config['server']['api_url']
-        self.__MANAGER_FQDN = config['server']['fqdn']
-        self.__MANAGER_LOGIN = config['credentials']['username']
-        self.__MANAGER_PASSWORD = config['credentials']['password']
-        self.__key = None
+        self.__config_manager = ConfigManager(config_file)
+        self.__session_manager = SessionManager()
         self.__client = None
+        self.__logger = logging.getLogger(__name__)
 
     def __getattr__(self, name):
         return _MultiCallMethod(self, name)
 
     def login(self):
-        if self.__key is not None:
-            return
-        context = ssl.create_default_context()
-        context.check_hostname = False
-        context.verify_mode = ssl.CERT_NONE
-        self.__client = ServerProxy(self.__MANAGER_API_URL, context=context)
-        self.__key = self.__client.auth.login(
-            self.__MANAGER_LOGIN, self.__MANAGER_PASSWORD)
+        if self.__client is None:
+            context = ssl.create_default_context()
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
+            self.__client = ServerProxy(self.__config_manager.manager_api_url, context=context)
+
+        if self.__session_manager.session_key is not None:
+            # try to run a query to the server to see if the session is still valid
+            try:
+                self.__client.user.listAssignableRoles(self.__session_manager.session_key)
+                api_url = self.__config_manager.manager_api_url
+                self.__logger.info(f'User {self.__config_manager.manager_login} already logged in to {api_url}')
+                return
+            except Fault as e:
+                self.__logger.warning(f'Session key is not valid anymore: {e.faultString}')
+
+        if self.__config_manager.manager_login is None:
+            self.__config_manager.manager_login = input('Enter your username: ')
+
+        manager_password = self.__config_manager.manager_password
+        if manager_password is None:
+            manager_password = getpass.getpass(
+                f'Enter your password for username {self.__config_manager.manager_login}: ')
+
+        try:
+            self.__session_manager.session_key = self.__client.auth.login(
+                self.__config_manager.manager_login, manager_password)
+        except Fault as e:
+            self.__logger.error(f'Could not login: {e.faultString} as user {self.__config_manager.manager_login}')
+            sys.exit(1)
+        self.__logger.info(f'User {self.__config_manager.manager_login} logged in')
 
     def logout(self):
-        if self.__key is None:
-            return
-        self.__client.auth.logout(self.__key)
-        self.__client("close")()
-        self.__key = None
+        if self.__session_manager.session_key is not None:
+            self.__client.auth.logout(self.__session_manager.session_key)
+            self.__client("close")()
+        del self.__session_manager.session_key
+        self.__logger.info(f'User {self.__config_manager.manager_login} logged out')
 
     def is_logged_in(self):
-        return self.__key is not None
+        return self.__session_manager.session_key is not None
 
     def get_session_key(self):
-        return self.__key
+        return self.__session_manager.session_key
 
     def get_instance(self):
         return self.__client
-
-    @property
-    def manager_login(self):
-        return self.__MANAGER_LOGIN
-
-    @property
-    def manager_fqdn(self):
-        return self.__MANAGER_FQDN

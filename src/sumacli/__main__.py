@@ -54,7 +54,6 @@ def perform_suma_scheduling(factory, args):
         logger.error("No systems found in file: " + args.filename)
         logger.error("The format of the file is: systemName,year-month-day hour:minute:second")
         logger.error("Example: sumacli-client,2021-11-06 10:00:00")
-        client.logout()
         sys.exit(66)
 
     exit_code = 0
@@ -83,7 +82,6 @@ def perform_suma_scheduling(factory, args):
                 failed_systems += 1
     if action_id_file_manager.save():
         logger.info(f"Action IDs file saved: {action_id_file_manager.get_filename()}")
-    client.logout()
 
     if failed_systems > 0 and success_systems > 0:
         exit_code = 64
@@ -117,8 +115,6 @@ def perform_validation(args):
 
     action_id_validator = validator.ActionIDValidator(client, action_id_file_manager)
     action_id_validator.validate()
-
-    client.logout()
 
 
 def perform_utils_tasks(args):
