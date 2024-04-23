@@ -97,7 +97,7 @@ class SystemListParser:
         d = data[1].strip()
         target = None
         if len(data) >= 3:
-            target = data[2]
+            target = data[2].strip()
         kopts = None
         if len(data) == 4:
             kopts = data[3]
