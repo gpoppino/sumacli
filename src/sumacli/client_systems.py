@@ -1,3 +1,4 @@
+import csv
 import logging
 from xmlrpc.client import Fault
 from sumacli.advisory_type import AdvisoryType
@@ -66,9 +67,10 @@ class SystemListParser:
 
     def parse(self):
         with open(self.__filename) as f:
-            for line in f:
-                if not self._add_system(line):
-                    self.__logger.error("Line skipped: " + line)
+            csvreader = csv.reader(f)
+            for data in csvreader:
+                if not self._add_system(data):
+                    self.__logger.error(f'Line skipped: {data}')
         return self.__systems
 
     def get_systems(self):
@@ -83,12 +85,8 @@ class SystemListParser:
             return []
         return systems
 
-    def _add_system(self, line):
-        if len(line.strip()) == 0:
-            return False
-        try:
-            data = line.split(',')
-        except ValueError:
+    def _add_system(self, data):
+        if not data:
             return False
         if len(data) == 1 or len(data) > 4:
             # system specified but no date or invalid data
