@@ -48,14 +48,14 @@ class TestSystemListParser(unittest.TestCase):
         self.assertDictEqual({}, self.parser.get_systems())
 
     def test_systemListParserOneItem(self):
-        self.parser._add_system(f"{self.system1},{self.date1}")
+        self.parser._add_system([self.system1,self.date1])
         systems = self.parser.get_systems()
         self.assertEqual(self.date1, list(systems.keys())[0])
         self.assertEqual(self.system1, systems[self.date1][0].name)
 
     def test_systemListParserAllDifferentDateItems(self):
-        self.parser._add_system(f"{self.system1},{self.date1}")
-        self.parser._add_system(f"{self.system2},{self.date2}")
+        self.parser._add_system([self.system1,self.date1])
+        self.parser._add_system([self.system2,self.date2])
         systems = self.parser.get_systems()
 
         self.assertTrue(self.date1 in systems)
@@ -64,9 +64,9 @@ class TestSystemListParser(unittest.TestCase):
         self.assertEqual(self.system2, systems[self.date2][0].name)
 
     def test_systemListParserSameDateItems(self):
-        self.parser._add_system(f"{self.system1},{self.date1}")
-        self.parser._add_system(f"{self.system2},{self.date2}")
-        self.parser._add_system(f"{self.system3},{self.date1}")
+        self.parser._add_system([self.system1,self.date1])
+        self.parser._add_system([self.system2,self.date2])
+        self.parser._add_system([self.system3,self.date1])
         systems = self.parser.get_systems()
 
         self.assertTrue(self.date1 in systems)
@@ -80,7 +80,7 @@ class TestSystemListParser(unittest.TestCase):
         self.assertDictEqual({}, self.parser.get_systems())
 
     def test_systemListParserGroupItems(self):
-        self.parser._add_system(f"group:my-servers-group,{self.date3}")
+        self.parser._add_system(["group:my-servers-group",self.date3])
         systems = self.parser.get_systems()
 
         self.assertTrue(self.date3 in systems)
@@ -88,11 +88,11 @@ class TestSystemListParser(unittest.TestCase):
         self.assertEqual(self.system2, systems[self.date3][1].name)
 
     def test_systemListParserTargetArgument(self):
-        self.parser._add_system(f"{self.system1},{self.date1},target1")
+        self.parser._add_system([self.system1,self.date1,"target1"])
         systems = self.parser.get_systems()
         self.assertEqual("target1", systems[self.date1][0].target)
 
     def test_systemListParserKoptsArgument(self):
-        self.parser._add_system(f"{self.system1},{self.date1},target1,kopts1")
+        self.parser._add_system([self.system1,self.date1,"target1","kopts1"])
         systems = self.parser.get_systems()
         self.assertEqual("kopts1", systems[self.date1][0].kopts)
