@@ -168,6 +168,8 @@ def main():
     migration_parser.add_argument("filename", help="Filename of systems and their schedules for migration.")
     migration_parser.add_argument("-f", "--save-action-ids-file",
                                   help="File name to save action IDs of scheduled jobs.")
+    migration_parser.add_argument("-d", "--dry-run", help="Dry run mode. Do not perform the migration.",
+                                  action="store_true")
     migration_parser.set_defaults(func=perform_product_migration)
 
     upgrade_parser = subparsers.add_parser("upgrade", help="Upgrades systems to a new product version.")
