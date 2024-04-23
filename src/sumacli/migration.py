@@ -15,9 +15,15 @@ class SystemProductMigrationScheduler(Scheduler):
     def schedule(self):
         action_ids = []
         try:
-            action_ids.append(self.__client.system.scheduleProductMigration(self.__system.get_id(self.__client),
-                                                                            self.__system.target, [], self.__dry_run,
-                                                                            self.__date))
+            if self.__system.kopts is not None:
+                action_ids.append(self.__client.system.scheduleProductMigration(self.__system.get_id(self.__client),
+                                                                                self.__system.kopts,
+                                                                                self.__system.target, [],
+                                                                                self.__dry_run, self.__date))
+            else:
+                action_ids.append(self.__client.system.scheduleProductMigration(self.__system.get_id(self.__client),
+                                                                                self.__system.target, [],
+                                                                                self.__dry_run, self.__date))
             self.__logger.debug(f"Successfully scheduled product migration with action ID {action_ids}")
             if self.__dry_run:
                 self.__logger.info(f"Dry run mode: no action taken for system {self.__system.name}")
