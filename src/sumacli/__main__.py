@@ -12,7 +12,7 @@ import sys
 def perform_scheduling(scheduler, system, date):
     logger = logging.getLogger(__name__)
     action_ids = scheduler.schedule()
-    if action_ids is not None:
+    if action_ids:
         if isinstance(scheduler, migration.SystemProductMigrationScheduler):
             logger.info(f"System {system.name} scheduled successfully for product migration at {date}")
         elif isinstance(scheduler, patching.SystemPatchingScheduler):
@@ -169,6 +169,8 @@ def main():
     migration_parser.add_argument("-f", "--save-action-ids-file",
                                   help="File name to save action IDs of scheduled jobs.")
     migration_parser.add_argument("-d", "--dry-run", help="Dry run mode. Do not perform the migration.",
+                                  action="store_true")
+    migration_parser.add_argument("-l", "--list-migration-targets", help="List migration targets for each system.",
                                   action="store_true")
     migration_parser.set_defaults(func=perform_product_migration)
 
