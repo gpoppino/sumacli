@@ -44,7 +44,7 @@ class SystemUpgradeScheduler(Scheduler):
             kopts = kopts + " " + self.__system.kopts
         pillar_data = {"kernel": f"{org_id}/" + kstree_label + "/linux",
                        "initrd": f"{org_id}/" + kstree_label + "/initrd",
-                       "uyuni-reinstall-name": "suse_patching_upgrade",
+                       "uyuni-reinstall-name": "sumacli_upgrade",
                        "kopts": kopts}
         return pillar_data
 
