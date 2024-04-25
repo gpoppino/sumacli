@@ -52,7 +52,7 @@ class SystemUpgradeScheduler(Scheduler):
         kstree_label, kstree_data = self.__get_kickstart_tree()
         reactivation_key = self.__client.system.obtainReactivationKey(self.__system.get_id(self.__client))
         variables = {"ks_distro": kstree_data['install_type']['label'],
-                     "redhat_management_server": self.__client.manager_fqdn,
+                     "redhat_management_server": self.__config_manager.manager_fqdn,
                      "redhat_management_key": reactivation_key}
         self.__client.system.setVariables(self.__system.get_id(self.__client), False, variables)
 
