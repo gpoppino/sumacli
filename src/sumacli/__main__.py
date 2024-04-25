@@ -16,7 +16,7 @@ def perform_scheduling(scheduler, system, date):
         if isinstance(scheduler, migration.SystemProductMigrationScheduler):
             logger.info(f"System {system.name} scheduled successfully for product migration at {date}")
         elif isinstance(scheduler, patching.SystemPatchingScheduler):
-            advisory_types_description = [t.value + " " for t in scheduler.get_advisory_types()]
+            advisory_types_description = [t.value for t in scheduler.get_advisory_types()]
             logger.info(f"System {system.name} scheduled successfully for "
                         f"{advisory_types_description} patching at {date}")
         elif isinstance(scheduler, utils.SystemPackageRefreshScheduler):
@@ -27,7 +27,7 @@ def perform_scheduling(scheduler, system, date):
         if isinstance(scheduler, migration.SystemProductMigrationScheduler):
             logger.error(f"System {system.name} failed to be scheduled for product migration at {date}")
         elif isinstance(scheduler, patching.SystemPatchingScheduler):
-            advisory_types_description = [t.value + " " for t in scheduler.get_advisory_types()]
+            advisory_types_description = [t.value for t in scheduler.get_advisory_types()]
             logger.error(f"System {system.name} failed to be scheduled for "
                          f"{advisory_types_description} patching at {date}")
         elif isinstance(scheduler, utils.SystemPackageRefreshScheduler):

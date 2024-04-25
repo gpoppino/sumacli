@@ -35,7 +35,7 @@ class SystemPatchingScheduler(Scheduler):
             return None
 
         if not errata:
-            advisory_types_descriptions = [t.value + " " for t in self.__advisoryTypes]
+            advisory_types_descriptions = [t.value for t in self.__advisoryTypes]
             self.__logger.warning(f"No patches of type {advisory_types_descriptions} available for system: "
                                   f"{self.__system.name} . Skipping...")
             return None
