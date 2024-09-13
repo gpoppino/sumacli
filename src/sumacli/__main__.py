@@ -121,7 +121,6 @@ def perform_utils_tasks(args):
     factory = utils.UtilsSchedulerFactory()
     perform_suma_scheduling(factory, args)
 
-
 def perform_user_tasks(args):
     client = suma_xmlrpc_client.SumaClient(args.config)
 
@@ -185,8 +184,10 @@ def main():
 
     utils_parser = subparsers.add_parser("utils", help="Some utility commands to run on systems.")
     utils_parser.add_argument("filename", help="Filename of systems and their schedules for utility commands.")
-    utils_parser.add_argument("-r", "--package-refresh", help="Schedules a package list refresh for a system.",
-                              action="store_true", required=True)
+    utils_group = utils_parser.add_mutually_exclusive_group()
+    utils_group.add_argument("-r", "--package-refresh", help="Schedules a package list refresh for a system.",
+                              action="store_true")
+    utils_group.add_argument("-b", "--reboot", help="Schedules a reboot for a system.", action="store_true")
     utils_parser.add_argument("-f", "--save-action-ids-file", help="File name to save action IDs of scheduled jobs.")
     utils_parser.set_defaults(func=perform_utils_tasks)
 
