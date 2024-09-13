@@ -23,6 +23,8 @@ def perform_scheduling(scheduler, system, date):
             logger.info(f"System {system.name} scheduled successfully for a package refresh at {date}")
         elif isinstance(scheduler, upgrade.SystemUpgradeScheduler):
             logger.info(f"System {system.name} scheduled successfully for upgrade at {date}")
+        elif isinstance(scheduler, utils.SystemRebootScheduler):
+            logger.info(f"System {system.name} scheduled successfully for reboot at {date}")
     else:
         if isinstance(scheduler, migration.SystemProductMigrationScheduler):
             logger.error(f"System {system.name} failed to be scheduled for product migration at {date}")
@@ -34,6 +36,8 @@ def perform_scheduling(scheduler, system, date):
             logger.error(f"System {system.name} failed to be scheduled for a package refresh at {date}")
         elif isinstance(scheduler, upgrade.SystemUpgradeScheduler):
             logger.error(f"System {system.name} failed to be scheduled for upgrade at {date}")
+        elif isinstance(scheduler, utils.SystemRebootScheduler):
+            logger.error(f"System {system.name} failed to be scheduled for reboot at {date}")
     return action_ids
 
 
