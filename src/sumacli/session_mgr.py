@@ -1,7 +1,7 @@
 import logging
 import os
 
-from sumacli.config_mgr import ConfigManager
+from .config_mgr import ConfigManager
 
 
 class SessionManager:

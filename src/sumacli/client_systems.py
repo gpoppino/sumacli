@@ -1,7 +1,7 @@
 import csv
 import logging
 from xmlrpc.client import Fault
-from sumacli.advisory_type import AdvisoryType
+from .advisory_type import AdvisoryType
 
 
 class SystemErrataInspector:

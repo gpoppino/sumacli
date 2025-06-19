@@ -5,9 +5,9 @@ from datetime import datetime
 import logging.config
 import logging
 
-from sumacli.scheduler import SchedulerFactory, Scheduler
-from sumacli.client_systems import SystemErrataInspector
-from sumacli.advisory_type import AdvisoryType
+from .scheduler import SchedulerFactory, Scheduler
+from .client_systems import SystemErrataInspector
+from .advisory_type import AdvisoryType
 
 
 class SystemPatchingScheduler(Scheduler):

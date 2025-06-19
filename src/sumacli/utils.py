@@ -1,7 +1,7 @@
 import logging
 from xmlrpc.client import Fault
 
-from sumacli.scheduler import SchedulerFactory, Scheduler
+from .scheduler import SchedulerFactory, Scheduler
 
 
 class SystemPackageRefreshScheduler(Scheduler):
