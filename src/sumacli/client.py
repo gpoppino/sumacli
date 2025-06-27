@@ -2,10 +2,10 @@ import getpass
 import logging
 import sys
 from xmlrpc.client import ServerProxy, Fault
-from sumacli.config_mgr import ConfigManager
+from .config_mgr import ConfigManager
 import ssl
 
-from sumacli.session_mgr import SessionManager
+from .session_mgr import SessionManager
 
 
 class _MultiCallMethod:

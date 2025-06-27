@@ -39,9 +39,9 @@ Schedules SUSE-Manager clients for patching, migration or upgrade from the CLI
 %{__mkdir_p} %{buildroot}/%{_bindir}
 
 %if 0%{suse_version}
-    sed -i 's|#!/usr/bin/python3|#!/usr/bin/python3.11|' ./src/sumacli/__main__.py
+    sed -i 's|#!/usr/bin/python3|#!/usr/bin/python3.11|' ./src/sumacli/main.py
 %endif
-%{__install} -p -m0755 src/sumacli/__main__.py %{buildroot}/%{_bindir}/sumacli
+%{__install} -p -m0755 src/main.py %{buildroot}/%{_bindir}/sumacli
 
 %{__mkdir_p} %{buildroot}/%{_sysconfdir}/sumacli
 %{__install} -p -m0644 src/sumacli/conf/logging.conf %{buildroot}/%{_sysconfdir}/sumacli/

@@ -1,8 +1,8 @@
 import logging
 from xmlrpc.client import Fault
 
-from sumacli.scheduler import SchedulerFactory, Scheduler
-from sumacli.config_mgr import ConfigManager
+from .scheduler import SchedulerFactory, Scheduler
+from .config_mgr import ConfigManager
 
 
 class SystemUpgradeScheduler(Scheduler):
