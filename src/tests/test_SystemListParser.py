@@ -92,7 +92,17 @@ class TestSystemListParser(unittest.TestCase):
         systems = self.parser.get_systems()
         self.assertEqual("target1", systems[self.date1][0].target)
 
-    def test_systemListParserKoptsArgument(self):
-        self.parser._add_system([self.system1,self.date1,"target1","kopts1"])
+    def test_systemListParserKernelOptionsArgument(self):
+        self.parser._add_system([self.system1,self.date1,"target1","none","kopts1"])
         systems = self.parser.get_systems()
-        self.assertEqual("kopts1", systems[self.date1][0].kopts)
+        self.assertEqual("kopts1", systems[self.date1][0].kernel_options)
+
+    def test_systemListParserPostKernelOptionsArgument(self):
+        self.parser._add_system([self.system1,self.date1,"target1","none","kopts1","post_kopts1"])
+        systems = self.parser.get_systems()
+        self.assertEqual("post_kopts1", systems[self.date1][0].post_kernel_options)
+
+    def test_systemListParserProxyArgument(self):
+        self.parser._add_system([self.system1,self.date1,"target1","proxy1","kopts1","post_kopts1"])
+        systems = self.parser.get_systems()
+        self.assertEqual("proxy1", systems[self.date1][0].proxy)

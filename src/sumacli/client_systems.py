@@ -33,10 +33,12 @@ class SystemErrataInspector:
 
 
 class System:
-    def __init__(self, name, target=None, kopts=None):
+    def __init__(self, name, target=None, proxy=None, kernel_options=None, post_kernel_options=None):
         self.__name = name
         self.__target = target
-        self.__kopts = kopts
+        self.__proxy = proxy
+        self.__kernel_options = kernel_options
+        self.__post_kernel_options = post_kernel_options
 
     @property
     def name(self):
@@ -47,8 +49,24 @@ class System:
         return self.__target
 
     @property
-    def kopts(self):
-        return self.__kopts
+    def proxy(self):
+        return self.__proxy
+
+    def get_proxy_id(self, client):
+        if self.__proxy is None:
+            return -1
+        system_id = client.system.getId(self.__proxy)
+        if len(system_id) == 0:
+            raise ValueError("No such system: " + self.__proxy)
+        return system_id[0]['id']
+
+    @property
+    def kernel_options(self):
+        return self.__kernel_options
+
+    @property
+    def post_kernel_options(self):
+        return self.__post_kernel_options
 
     def get_id(self, client):
         system_id = client.system.getId(self.__name)
@@ -88,7 +106,7 @@ class SystemListParser:
     def _add_system(self, data):
         if not data:
             return False
-        if len(data) == 1 or len(data) > 4:
+        if len(data) == 1 or len(data) > 6:
             # system specified but no date or invalid data
             return False
         s = data[0].strip()
@@ -96,15 +114,22 @@ class SystemListParser:
         target = None
         if len(data) >= 3:
             target = data[2].strip()
-        kopts = None
-        if len(data) == 4:
-            kopts = data[3]
+        proxy = None
+        kernel_options = post_kernel_options = ""
+        if len(data) >= 4:
+            if data[3].strip().lower() != 'none':
+                proxy = data[3]
+        if len(data) >= 5:
+            kernel_options = data[4]
+        if len(data) == 6:
+            post_kernel_options = data[5]
+
         if d not in self.__systems.keys():
             self.__systems[d] = []
         if ":" in s:
             group = s.split(':')[1]
             systems = self._get_systems_from_group(group)
-            [self.__systems[d].append(System(s.get('profile_name'), target, kopts)) for s in systems]
+            [self.__systems[d].append(System(s.get('profile_name'), target, proxy, kernel_options, post_kernel_options)) for s in systems]
         else:
-            self.__systems[d].append(System(s, target, kopts))
+            self.__systems[d].append(System(s, target, proxy, kernel_options, post_kernel_options))
         return True
