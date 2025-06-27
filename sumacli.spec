@@ -13,7 +13,7 @@
 # published by the Open Source Initiative.
 
 Name:           sumacli
-Version:        1.0.0
+Version:        1.2.0
 Release:        0
 Summary:        Schedules SUSE-Manager clients for patching, migration or upgrade from the CLI
 License:        GPL-3.0-or-later
