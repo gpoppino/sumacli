@@ -117,7 +117,7 @@ class SystemListParser:
         proxy = None
         kernel_options = post_kernel_options = ""
         if len(data) >= 4:
-            if data[3].strip().lower() != 'none':
+            if data[3].strip().lower() not in ['none', 'null', 'nil', 'nulo', '']:
                 proxy = data[3]
         if len(data) >= 5:
             kernel_options = data[4]
