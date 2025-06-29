@@ -13,9 +13,9 @@
 # published by the Open Source Initiative.
 
 Name:           sumacli
-Version:        1.0.0
+Version:        1.2.0
 Release:        0
-Summary:        Schedules SUSE-Manager clients for patching, migration or upgrade from the CLI
+Summary:        Schedules patching, migration or upgrade for clients of SUSE Multi-Linux Manager from the CLI
 License:        GPL-3.0-or-later
 Group:          Applications/System
 URL:            https://github.com/gpoppino/sumacli
@@ -27,7 +27,7 @@ BuildRequires:  python-rpm-macros
 Requires:       python311
 
 %description
-Schedules SUSE-Manager clients for patching, migration or upgrade from the CLI
+Schedules patching, migration or upgrade for clients of SUSE Multi-Linux Manager from the CLI
 
 %prep
 %setup -q

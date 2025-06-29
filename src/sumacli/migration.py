@@ -16,7 +16,7 @@ class SystemProductMigrationScheduler(Scheduler):
     def schedule(self):
         action_ids = []
         try:
-            if self.__list_migration_targets or self.__system.kopts is not None:
+            if self.__list_migration_targets or self.__system.kernel_options is not None:
                 migration_targets = self.__client.system.listMigrationTargets(self.__system.get_id(self.__client))
                 if self.__list_migration_targets:
                     if not migration_targets:
@@ -27,18 +27,18 @@ class SystemProductMigrationScheduler(Scheduler):
                         self.__logger.info(f"  {target}")
                     return None
 
-                if self.__system.kopts is not None:
+                if self.__system.kernel_options is not None:
                     migration_target_found = False
                     for target in migration_targets:
-                        if target['ident'] == self.__system.kopts:
+                        if target['ident'] == self.__system.kernel_options:
                             action_ids.append(self.__client.system.scheduleProductMigration(
-                                self.__system.get_id(self.__client), self.__system.kopts, self.__system.target, [],
+                                self.__system.get_id(self.__client), self.__system.kernel_options, self.__system.target, [],
                                 self.__dry_run, self.__date))
                             migration_target_found = True
                             break
                     if not migration_target_found:
                         self.__logger.warning(
-                            f"Migration target {self.__system.kopts} not found for system {self.__system.name}")
+                            f"Migration target {self.__system.kernel_options} not found for system {self.__system.name}")
             else:
                 action_ids.append(self.__client.system.scheduleProductMigration(self.__system.get_id(self.__client),
                                                                                 self.__system.target, [],
